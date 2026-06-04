@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>计划日记</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      (() => {
+        const colors = {
+          "#e9a7ad": "pink",
+          "#c9838a": "pink",
+          "#f3c4c8": "pink",
+          "#e8b184": "orange",
+          "#c58b62": "orange",
+          "#f2ceb3": "orange",
+          "#dcc86e": "yellow",
+          "#b39d4d": "yellow",
+          "#efe1a9": "yellow",
+          "#9fcfac": "mint",
+          "#73a883": "mint",
+          "#c7e8cf": "mint",
+          "#7fa9eb": "blue",
+          "#6f92cf": "blue",
+          "#a9caff": "blue",
+          "#a995dc": "lavender",
+          "#8a76bd": "lavender",
+          "#c8b8eb": "lavender",
+          "#b8a7e6": "lavender",
+          "#c99add": "purple",
+          "#aa79bf": "purple",
+          "#e4cdef": "purple",
+          "#d8b7e6": "purple",
+        };
+        const rgbColors = {
+          "233,167,173": "pink",
+          "232,177,132": "orange",
+          "220,200,110": "yellow",
+          "159,207,172": "mint",
+          "127,169,235": "blue",
+          "169,149,220": "lavender",
+          "201,154,221": "purple",
+        };
+        const themeValues = {
+          pink: { theme: "#e9a7ad", deep: "#c9838a", soft: "#f3c4c8", rgb: "233,167,173" },
+          orange: { theme: "#e8b184", deep: "#c58b62", soft: "#f2ceb3", rgb: "232,177,132" },
+          yellow: { theme: "#dcc86e", deep: "#b39d4d", soft: "#efe1a9", rgb: "220,200,110" },
+          mint: { theme: "#9fcfac", deep: "#73a883", soft: "#c7e8cf", rgb: "159,207,172" },
+          blue: { theme: "#7fa9eb", deep: "#6f92cf", soft: "#a9caff", rgb: "127,169,235" },
+          lavender: { theme: "#a995dc", deep: "#8a76bd", soft: "#c8b8eb", rgb: "169,149,220" },
+          purple: { theme: "#c99add", deep: "#aa79bf", soft: "#e4cdef", rgb: "201,154,221" },
+        };
+        const normalize = (value) => String(value || "").trim().toLowerCase();
+        const readColor = () => {
+          try {
+            const theme = JSON.parse(localStorage.getItem("theme") || "null");
+            if (!theme) return "blue";
+            const values = [theme.theme, theme.deep, theme.soft, theme.swatch].map(normalize);
+            const hexMatch = values.find((value) => colors[value]);
+            return colors[hexMatch] || rgbColors[String(theme.rgb || "").replace(/\s+/g, "")] || "blue";
+          } catch {
+            return "blue";
+          }
+        };
+        const applyColor = () => {
+          const color = readColor();
+          const theme = themeValues[color] || themeValues.blue;
+          document.documentElement.style.setProperty("--nav-theme", theme.theme);
+          document.documentElement.style.setProperty("--nav-theme-deep", theme.deep);
+          document.documentElement.style.setProperty("--nav-theme-soft", theme.soft);
+          document.documentElement.style.setProperty("--nav-theme-rgb", theme.rgb);
+          document.body.dataset.previewColor = color;
+          document.querySelector("#colorPreview")?.classList.replace("blue", color);
+          document.querySelectorAll(".theme-dot").forEach((button) => {
+            button.classList.toggle("is-active", button.dataset.color === color);
+          });
+        };
+        window.__journalThemeColor = readColor();
+        document.addEventListener("DOMContentLoaded", applyColor);
+      })();
+    </script>
+  </head>
+  <body data-preview-color="blue">
+    <aside class="portal-sidebar" aria-label="左侧导航">
+      <a class="portal-nav-item" data-nav-key="home" href="../home/index.html" title="主页">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        <span>主页</span>
+      </a>
+      <a class="portal-nav-item" data-nav-key="habitat" href="../Habitat/index.html" title="栖息地">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 12 9-8 9 8"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg>
+        <span>栖息地</span>
+      </a>
+      <a class="portal-nav-item active" data-nav-key="journal" href="index.html" title="计划日记">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-5"/></svg>
+        <span>计划日记</span>
+      </a>
+      <button class="portal-nav-item" data-nav-key="bookmarks" type="button" title="网站收藏" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v18l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>
+        <span>网站收藏</span>
+      </button>
+      <button class="portal-nav-item" data-nav-key="notes" type="button" title="笔记整理" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
+        <span>笔记整理</span>
+      </button>
+      <button class="portal-add-widget" type="button" title="添加小组件" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      </button>
+      <button class="portal-settings" type="button" title="设置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.5 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        <span>设置</span>
+      </button>
+    </aside>
+    <main class="app-shell">
+      <section class="topbar" aria-label="计划概览">
+        <div class="top-title">
+          <div>
+            <p class="eyebrow">Plan Journal</p>
+            <h1>计划日记</h1>
+          </div>
+        </div>
+        <div class="top-side">
+          <div class="today-card">
+            <span id="todayLabel">今天</span>
+            <strong id="entryCount">0 条</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <form class="editor" id="entryForm">
+          <div class="field">
+            <label for="title">标题</label>
+            <input id="title" name="title" type="text" required />
+          </div>
+
+          <div class="split">
+            <div class="field">
+              <label for="subject">学习对象</label>
+              <input id="subject" name="subject" type="text" />
+            </div>
+            <div class="field">
+              <label for="date">日期</label>
+              <input id="date" name="date" type="date" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label>相关链接</label>
+              <div class="mini-actions">
+                <button class="mini-btn" type="button" id="removeLinkBtn" aria-label="减少链接行">-</button>
+                <button class="mini-btn" type="button" id="addLinkBtn" aria-label="增加链接行">+</button>
+              </div>
+            </div>
+            <div class="link-list" id="linkList"></div>
+          </div>
+
+          <div class="field">
+            <label for="tagInput">标签</label>
+            <div class="tag-compose">
+              <input id="tagInput" type="text" />
+              <button class="mini-btn" type="button" id="addTagBtn" aria-label="添加标签">+</button>
+            </div>
+            <div class="tag-row" id="selectedTags" aria-label="已选择标签"></div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label>日记记录</label>
+              <div class="mini-actions">
+                <button class="mini-btn" type="button" id="removeNoteBtn" aria-label="减少日记行">-</button>
+                <button class="mini-btn" type="button" id="addNoteBtn" aria-label="增加日记行">+</button>
+              </div>
+            </div>
+            <div class="note-list" id="noteList"></div>
+          </div>
+
+          <div class="field">
+            <label for="nextPlan">下一步计划</label>
+            <textarea id="nextPlan" name="nextPlan" rows="3"></textarea>
+          </div>
+
+          <div class="bottom-actions">
+            <div class="color-control">
+              <button class="color-toggle" type="button" id="colorToggle" aria-expanded="false">
+                <span class="color-preview blue" id="colorPreview" aria-hidden="true"></span>
+                背景颜色
+              </button>
+              <div class="theme-picker" id="themePicker" aria-label="选择这条记录的背景颜色" hidden>
+                <button class="theme-dot pink" type="button" data-color="pink" aria-label="樱粉"></button>
+                <button class="theme-dot orange" type="button" data-color="orange" aria-label="杏橙"></button>
+                <button class="theme-dot yellow" type="button" data-color="yellow" aria-label="奶黄"></button>
+                <button class="theme-dot mint" type="button" data-color="mint" aria-label="薄荷"></button>
+                <button class="theme-dot blue" type="button" data-color="blue" aria-label="浅蓝"></button>
+                <button class="theme-dot lavender" type="button" data-color="lavender" aria-label="薰衣草"></button>
+                <button class="theme-dot purple" type="button" data-color="purple" aria-label="雾紫"></button>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="ghost" type="button" id="resetBtn">清空</button>
+              <button class="primary" type="submit" id="submitBtn">添加记录</button>
+            </div>
+          </div>
+        </form>
+
+        <section class="journal" aria-label="日记列表">
+          <div class="tools">
+            <div class="search-wrap">
+              <span aria-hidden="true">⌕</span>
+              <input id="searchInput" type="search" placeholder="搜索" />
+            </div>
+            <div class="date-filters" aria-label="日期筛选">
+              <input id="filterDate" type="date" />
+            </div>
+            <button class="ghost compact" type="button" id="searchBtn">查找</button>
+          </div>
+
+          <div class="filter-tags" id="filterTags" aria-label="按标签筛选"></div>
+
+          <div class="empty-state" id="emptyState">
+            <h2>还没有云端日记</h2>
+            <p>登录后添加的记录会同步到同一个 Supabase 账号下。</p>
+          </div>
+
+          <div class="entries" id="entries"></div>
+        </section>
+      </section>
+    </main>
+
+    <template id="linkInputTemplate">
+      <div class="link-row">
+        <input class="link-remark-input" type="text" placeholder="备注" />
+        <input class="link-url-input" type="text" inputmode="url" />
+      </div>
+    </template>
+
+    <template id="noteInputTemplate">
+      <div class="note-row">
+        <span class="note-number"></span>
+        <textarea class="note-input" rows="2"></textarea>
+      </div>
+    </template>
+
+    <template id="entryTemplate">
+      <article class="entry-card" tabindex="0">
+        <div class="entry-summary">
+          <div class="title-line">
+            <time></time>
+            <div class="entry-title-row">
+              <span class="subject-pill"></span>
+              <h2></h2>
+            </div>
+            <div class="tag-row card-tags"></div>
+          </div>
+          <div class="card-actions">
+            <button class="icon-btn edit-btn" type="button" title="编辑" aria-label="编辑">✎</button>
+            <button class="icon-btn delete-btn" type="button" title="删除" aria-label="删除">×</button>
+          </div>
+        </div>
+        <div class="entry-details" hidden>
+          <ol class="note-text"></ol>
+          <p class="next-plan-text"></p>
+          <div class="entry-links"></div>
+        </div>
+      </article>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase-config.js"></script>
+    <script src="../shared-nav.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-﻿const userName = "lizlei";
+﻿
 const GUEST_SESSION_KEY = "portalGuestSession";
 const config = window.SUPABASE_CONFIG || {};
 const hasSupabaseConfig = Boolean(config.url && config.anonKey && window.supabase);
@@ -81,7 +81,7 @@ const modalTitle = document.querySelector("#modalTitle");
 const modalBody = document.querySelector("#modalBody");
 const modalClose = document.querySelector("#modalClose");
 
-userNameNode.textContent = userName;
+syncUserName();
 quoteNode.textContent = quotes[Math.floor(Math.random() * quotes.length)];
 
 let quickEditMode = false;
@@ -141,7 +141,27 @@ uploadDropZone.addEventListener("drop", (event) => {
 });
 
 window.addEventListener("hashchange", renderRoute);
+window.addEventListener("storage", (event) => {
+  if (event.key?.endsWith(":username") || event.key === "username") {
+    syncUserName();
+  }
+});
+window.addEventListener("pageshow", syncUserName);
 renderRoute();
+
+function syncUserName() {
+  let savedUserName = "";
+
+  try {
+    if (currentUser) {
+      savedUserName = localStorage.getItem(`user:${currentUser.id}:username`) || "";
+    } else if (isGuestSession()) {
+      savedUserName = localStorage.getItem("user:guest:username") || "";
+    }
+  } catch {}
+
+  userNameNode.textContent = savedUserName.trim() || "User";
+}
 
 function loadState() {
   try {
@@ -212,6 +232,7 @@ async function bootWorkspace() {
     if (error || !data?.session?.user) return;
 
     currentUser = data.session.user;
+    syncUserName();
     state = loadState();
     render();
     renderRoute();
@@ -224,6 +245,7 @@ async function bootWorkspace() {
     await loadCloudWorkspace();
     db.auth.onAuthStateChange(async (_event, session) => {
       currentUser = session?.user || null;
+      syncUserName();
       updateStorageHint();
       if (currentUser) await loadCloudWorkspace();
     });

@@ -1,0 +1,1893 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>栖息地 | Habitat</title>
+  <script>
+    (() => {
+      if (window.top !== window.self) document.documentElement.classList.add("portal-embedded");
+      try {
+        const theme = JSON.parse(localStorage.getItem("theme") || "null");
+        if (!theme) return;
+        const root = document.documentElement;
+        if (theme.theme) root.style.setProperty("--theme", theme.theme);
+        if (theme.deep) root.style.setProperty("--theme-deep", theme.deep);
+        if (theme.soft) root.style.setProperty("--theme-soft", theme.soft);
+        if (theme.rgb) root.style.setProperty("--theme-rgb", theme.rgb);
+      } catch {}
+    })();
+  </script>
+  <style>
+    html.portal-embedded .sidebar,
+    html.portal-embedded .global-account-dock {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --theme: #7fa9eb;
+      --theme-deep: #6f92cf;
+      --theme-soft: #a9caff;
+      --theme-rgb: 127, 169, 235;
+      --blue: var(--theme-deep);
+      --blue-2: var(--theme);
+      --blue-3: rgba(var(--theme-rgb), .2);
+      --ink: var(--theme-deep);
+      --muted: rgba(var(--theme-rgb), .72);
+      --line: rgba(var(--theme-rgb), .24);
+      --glass: rgba(255, 255, 255, .66);
+      --glass-strong: rgba(255, 255, 255, .82);
+      --shadow: 0 22px 58px rgba(var(--theme-rgb), .18);
+      --soft-shadow: 0 12px 28px rgba(var(--theme-rgb), .14);
+      --sidebar: 82px;
+      --radius: 28px;
+      --small-radius: 18px;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 53% 24%, rgba(var(--theme-rgb), .28) 0, rgba(var(--theme-rgb), .16) 31%, rgba(255, 255, 255, 0) 63%),
+        radial-gradient(circle at 17% 76%, rgba(var(--theme-rgb), .2), rgba(255, 255, 255, 0) 32%),
+        radial-gradient(circle at 87% 67%, rgba(var(--theme-rgb), .18), rgba(255, 255, 255, 0) 26%),
+        linear-gradient(135deg, #fbfdff 0%, #eef6ff 44%, #ffffff 100%);
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      border-radius: 50%;
+    }
+
+    body::before {
+      width: 980px;
+      height: 500px;
+      left: 50%;
+      top: 42px;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse, rgba(var(--theme-rgb), .22), rgba(255, 255, 255, 0) 68%);
+      filter: blur(4px);
+    }
+
+    body::after {
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(var(--theme-rgb), .45) 0 1px, transparent 2px),
+        radial-gradient(circle, rgba(255, 255, 255, .95) 0 2px, transparent 3px);
+      background-size: 210px 210px, 290px 250px;
+      background-position: 20px 90px, 110px 55px;
+      opacity: .45;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      width: var(--sidebar);
+      padding: 72px 0 36px;
+      color: rgba(var(--theme-rgb), .72);
+    }
+
+    .nav-item,
+    .add-widget,
+    .settings {
+      position: relative;
+      display: grid;
+      place-items: center;
+      gap: 7px;
+      width: 64px;
+      min-height: 54px;
+      color: rgba(var(--theme-rgb), .72);
+      text-decoration: none;
+      transition: color .22s ease, transform .22s ease;
+    }
+
+    .nav-item svg,
+    .add-widget svg,
+    .settings svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 1.8;
+      filter: drop-shadow(0 4px 7px rgba(var(--theme-rgb), .14));
+    }
+
+    .nav-item span,
+    .settings span {
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .nav-item:hover,
+    .add-widget:hover,
+    .settings:hover,
+    .nav-item.active {
+      color: var(--theme-deep);
+      transform: translateY(-1px);
+    }
+
+    .nav-item.active::after {
+      content: "";
+      position: absolute;
+      margin-left: 48px;
+      margin-top: -30px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--theme-soft);
+      box-shadow: 0 0 0 4px rgba(var(--theme-rgb), .13);
+    }
+
+    .add-widget {
+      margin-top: 4px;
+    }
+
+    .settings {
+      margin-top: auto;
+    }
+
+    .top-tools {
+      position: fixed;
+      top: 36px;
+      right: 42px;
+      z-index: 22;
+      display: flex;
+      align-items: flex-start;
+      gap: 22px;
+    }
+
+    .player {
+      display: grid;
+      grid-template-columns: 48px minmax(150px, 1fr) 34px 42px 34px;
+      align-items: center;
+      gap: 14px;
+      min-width: 390px;
+      height: 74px;
+      padding: 10px 18px;
+      border: 1px solid rgba(255,255,255,.78);
+      border-radius: 28px;
+      background: var(--glass-strong);
+      box-shadow: var(--soft-shadow), inset 0 1px 0 rgba(255,255,255,.86);
+      backdrop-filter: blur(20px);
+    }
+
+    .cover {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background:
+        linear-gradient(150deg, rgba(var(--theme-rgb), .3), rgba(255,255,255,.25)),
+        url("../home/images/avatar.png") center / cover;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.72), 0 8px 20px rgba(var(--theme-rgb), .18);
+    }
+
+    .song-title {
+      margin: 0 0 5px;
+      color: #202636;
+      font-size: 15px;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .artist {
+      margin: 0;
+      color: #a3aabb;
+      font-size: 13px;
+    }
+
+    .player-btn {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: rgba(var(--theme-rgb), .72);
+    }
+
+    .player-btn.play {
+      width: 42px;
+      height: 42px;
+      color: #fff;
+      background: linear-gradient(145deg, var(--theme-deep), var(--theme-soft));
+      box-shadow: 0 12px 24px rgba(var(--theme-rgb), .28);
+    }
+
+    .player-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 1.9;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(1060px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 104px 0 18px;
+    }
+
+    .bubble {
+      position: fixed;
+      z-index: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: var(--blue);
+      font-weight: 800;
+      background: radial-gradient(circle at 34% 25%, rgba(255, 255, 255, .95), rgba(235, 244, 255, .62));
+      border: 1px solid rgba(255, 255, 255, .92);
+      box-shadow: 0 18px 46px rgba(var(--theme-rgb), .14), inset 0 0 22px rgba(255, 255, 255, .7);
+      opacity: .9;
+      pointer-events: none;
+    }
+
+    .bubble span {
+      display: block;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .bubble small {
+      display: block;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .b1 { width: 124px; height: 124px; left: 9%; top: 118px; }
+    .b2 { width: 116px; height: 116px; left: 9%; top: 375px; }
+    .b3 { width: 116px; height: 116px; left: 8%; bottom: 48px; }
+    .b4 { width: 112px; height: 112px; right: 9%; top: 183px; }
+    .b5 { width: 106px; height: 106px; right: 8%; bottom: 198px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 24px;
+      margin-bottom: 14px;
+      padding: 0 8px;
+    }
+
+    .title-block {
+      text-align: center;
+      justify-self: center;
+      transform: translateX(82px);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", "Noto Serif SC", serif;
+      font-size: clamp(34px, 3.8vw, 50px);
+      line-height: 1.05;
+      color: var(--theme-deep);
+      font-weight: 700;
+      text-shadow: 0 10px 30px rgba(var(--theme-rgb), .2);
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--theme-deep);
+      font-size: 16px;
+    }
+
+    .hero-actions,
+    .toolbar,
+    .date-pill,
+    .filters,
+    .history-tools,
+    .row-actions,
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn,
+    .chip,
+    .file-label {
+      border: 1px solid rgba(var(--theme-rgb), .26);
+      background: rgba(255, 255, 255, .68);
+      color: var(--theme-deep);
+      border-radius: 999px;
+      padding: 10px 18px;
+      box-shadow: var(--soft-shadow);
+      transition: .2s ease;
+      white-space: nowrap;
+      font-weight: 800;
+    }
+
+    .hero-actions .btn {
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .btn:hover,
+    .chip:hover,
+    .file-label:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 34px rgba(var(--theme-rgb), .2);
+      border-color: rgba(var(--theme-rgb), .42);
+    }
+
+    .primary {
+      color: #fff;
+      border: none;
+      background: var(--theme);
+      box-shadow: 0 14px 28px rgba(var(--theme-rgb), .32);
+    }
+
+    .danger {
+      color: #ee7373;
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, .48);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 8px 20px rgba(var(--theme-rgb), .1);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, .9);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .66);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: none;
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: transparent;
+    }
+
+    .card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--theme-deep);
+      font-size: 19px;
+      font-weight: 850;
+    }
+
+    .card-title .icon {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: rgba(var(--theme-rgb), .1);
+      border: 1px solid rgba(var(--theme-rgb), .18);
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .date-pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .7);
+      border: 1px solid rgba(var(--theme-rgb), .22);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+      color: var(--theme-deep);
+    }
+
+    .date-pill input,
+    .history-tools input,
+    .history-tools select {
+      width: 136px;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--theme-deep);
+    }
+
+    .date-pill input::-webkit-calendar-picker-indicator,
+    .month-input::-webkit-calendar-picker-indicator {
+      opacity: .55;
+      cursor: pointer;
+    }
+
+    .date-pill:focus-within,
+    .month-input:focus,
+    .history-tools .month-input:focus {
+      border-color: rgba(var(--theme-rgb), .48);
+      box-shadow: 0 0 0 4px rgba(var(--theme-rgb), .12), inset 0 1px 0 rgba(255, 255, 255, .9);
+    }
+
+    label {
+      color: var(--theme-deep);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .input,
+    textarea,
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(var(--theme-rgb), .28);
+      border-radius: 13px;
+      outline: 0;
+      color: var(--theme-deep);
+      background: rgba(255, 255, 255, .68);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72);
+      transition: .2s ease;
+    }
+
+    .input,
+    select {
+      height: 46px;
+      padding: 0 14px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 52px;
+      padding: 10px 14px;
+    }
+
+    .input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(var(--theme-rgb), .72);
+      box-shadow: 0 0 0 4px rgba(var(--theme-rgb), .14), inset 0 1px 0 rgba(255, 255, 255, .9);
+    }
+
+    .weight-layout {
+      display: grid;
+      grid-template-columns: 168px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .big-input {
+      height: 62px;
+      font-size: 28px;
+      font-weight: 700;
+      border-radius: 15px;
+    }
+
+    .hint {
+      margin: 8px 0 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .chart-top {
+      display: grid;
+      grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-height: 74px;
+      margin-bottom: 4px;
+    }
+
+    .chart-top > label {
+      white-space: nowrap;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(3, max-content);
+      gap: 10px;
+      justify-content: end;
+      align-items: center;
+    }
+
+    .chip {
+      padding: 7px 12px;
+      font-size: 12px;
+      box-shadow: none;
+    }
+
+    .chip.active {
+      color: #fff;
+      background: var(--theme);
+      border-color: transparent;
+    }
+
+    .month-input {
+      grid-column: 1 / -1;
+      justify-self: end;
+      width: 105px;
+      height: 33px;
+      border: 1px solid rgba(var(--theme-rgb), .28);
+      border-radius: 999px;
+      padding: 0 10px;
+      outline: 0;
+      background: rgba(255, 255, 255, .62);
+      color: var(--theme-deep);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+      font-size: 12px;
+    }
+
+    .filters .month-input {
+      width: 145px;
+    }
+
+    .history-tools .month-input {
+      border: 1px solid rgba(var(--theme-rgb), .28);
+      background: rgba(255, 255, 255, .62);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+    }
+
+    .chart-wrap {
+      height: 136px;
+      min-width: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(90px, 1fr));
+      gap: 9px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 9px 7px;
+      text-align: center;
+      border-radius: 13px;
+      background: rgba(255, 255, 255, .72);
+      border: 1px solid rgba(var(--theme-rgb), .17);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .92);
+    }
+
+    .stat small {
+      display: block;
+      color: var(--theme);
+      font-size: clamp(10px, 1vw, 12px);
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--theme-deep);
+      font-size: clamp(14px, 1.35vw, 17px);
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .meal-list,
+    .history-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .history-list {
+      --history-row-height: 42px;
+      --history-visible-rows: 5;
+      align-content: start;
+      grid-auto-rows: max-content;
+      gap: 6px;
+      height: calc((var(--history-row-height) * var(--history-visible-rows)) + (6px * (var(--history-visible-rows) - 1)));
+      min-height: 0;
+      max-height: calc((var(--history-row-height) * var(--history-visible-rows)) + (6px * (var(--history-visible-rows) - 1)));
+      overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(var(--theme-rgb), .48) transparent;
+    }
+
+    .history-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(var(--theme-rgb), .42);
+      border-radius: 999px;
+    }
+
+    .meal-row {
+      display: grid;
+      grid-template-columns: 70px minmax(140px, 1fr) minmax(96px, auto) 108px;
+      gap: 14px;
+      align-items: start;
+      min-height: 58px;
+    }
+
+    .meal-name {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--theme-deep);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .thumbs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-height: 48px;
+      align-items: center;
+    }
+
+    .thumb {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      border-radius: 13px;
+      overflow: hidden;
+      border: 1px solid rgba(var(--theme-rgb), .22);
+      background: rgba(255, 255, 255, .7);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .remove-img {
+      position: absolute;
+      right: -4px;
+      top: -5px;
+      width: 19px;
+      height: 19px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .95);
+      color: var(--theme-deep);
+      line-height: 19px;
+      padding: 0;
+      box-shadow: 0 3px 8px rgba(70, 105, 170, .2);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 48px;
+      padding: 0 14px;
+      font-size: 13px;
+      border-style: dashed;
+      box-shadow: none;
+    }
+
+    .span-text {
+      min-height: 68px;
+    }
+
+    .exercise-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric-box {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .64);
+      border: 1px solid rgba(var(--theme-rgb), .2);
+    }
+
+    .metric-box .label-line {
+      color: var(--theme-deep);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 7px;
+    }
+
+    .metric-value {
+      text-align: center;
+      color: var(--theme-deep);
+      font-size: 27px;
+      font-weight: 750;
+    }
+
+    .metric-value span {
+      margin-left: 5px;
+      font-size: 13px;
+      color: var(--theme);
+    }
+
+    .extra-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .round-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid rgba(var(--theme-rgb), .26);
+      color: var(--theme-deep);
+      background: rgba(255, 255, 255, .7);
+      box-shadow: var(--soft-shadow);
+      font-size: 20px;
+    }
+
+    .extra-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .extra-labels,
+    .extra-row {
+      display: grid;
+      grid-template-columns: 1.25fr .7fr .7fr 1.25fr 38px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .extra-labels {
+      color: var(--theme-deep);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 0 48px 0 12px;
+    }
+
+    .history-card {
+      border: 1px solid rgba(var(--theme-rgb), .18);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .58);
+      overflow: hidden;
+    }
+
+    .history-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .history-panel .history-list {
+      flex: none;
+    }
+
+    .history-main {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 18px 82px 52px minmax(140px, 1fr) 68px 72px;
+      gap: 5px;
+      align-items: center;
+      height: 42px;
+      min-height: 42px;
+      padding: 7px 9px;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: var(--theme-deep);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .history-main strong {
+      color: var(--theme-deep);
+      white-space: nowrap;
+    }
+
+    .summary-line {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--theme);
+      font-size: 10.5px;
+    }
+
+    .history-main .hide-mobile {
+      white-space: nowrap;
+    }
+
+    .row-actions {
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+    }
+
+    .link-btn {
+      border: 0;
+      background: transparent;
+      color: var(--theme-deep);
+      padding: 2px 1px;
+      font-size: 12px;
+    }
+
+    .link-btn.danger {
+      color: #ee7373;
+    }
+
+    .history-detail {
+      display: none;
+      padding: 0 16px 14px 51px;
+      color: var(--theme-deep);
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    .history-card.open .history-detail {
+      display: block;
+    }
+
+    .detail-section {
+      margin-top: 4px;
+    }
+
+    .image-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .empty {
+      padding: 36px 10px;
+      text-align: center;
+      color: var(--theme);
+      border: 1px dashed rgba(var(--theme-rgb), .32);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .44);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 30px;
+      z-index: 20;
+      transform: translate(-50%, 20px);
+      opacity: 0;
+      padding: 12px 22px;
+      border-radius: 999px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--theme-soft), var(--theme-deep));
+      box-shadow: 0 18px 36px rgba(var(--theme-rgb), .32);
+      transition: .25s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(31, 61, 111, .28);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-box {
+      width: min(820px, 100%);
+      padding: 16px;
+      border-radius: 26px;
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(255, 255, 255, .92);
+      box-shadow: 0 28px 80px rgba(41, 78, 139, .28);
+    }
+
+    .modal-image {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      border-radius: 18px;
+      background: rgba(226, 238, 255, .62);
+    }
+
+    .modal-actions {
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1320px) {
+      .bubble {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1060px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .title-block {
+        transform: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      :root { --sidebar: 68px; }
+
+      .sidebar {
+        gap: 20px;
+        padding-top: 44px;
+      }
+
+      .nav-item,
+      .settings {
+        width: 56px;
+      }
+
+      .top-tools {
+        top: 18px;
+        right: 18px;
+        gap: 10px;
+      }
+
+      .player {
+        grid-template-columns: 42px minmax(0, 1fr) 36px;
+        min-width: 220px;
+        height: 64px;
+        border-radius: 23px;
+        padding: 9px 12px;
+      }
+
+      .player-btn.skip,
+      .artist {
+        display: none;
+      }
+
+      .cover {
+        width: 42px;
+        height: 42px;
+      }
+
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        width: calc(100% - 86px);
+        max-width: 1060px;
+        margin-left: var(--sidebar);
+        padding-top: 108px;
+      }
+
+      .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .hero-actions {
+        justify-content: center;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 22px;
+      }
+
+      .card-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .weight-layout,
+      .exercise-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-top {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .filters {
+        justify-content: start;
+      }
+
+      .filters .month-input {
+        justify-self: start;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .meal-row {
+        grid-template-columns: 1fr;
+      }
+
+      .meal-name {
+        min-height: auto;
+      }
+
+      .file-label {
+        width: 100%;
+      }
+
+      .extra-labels {
+        display: none;
+      }
+
+      .extra-row {
+        grid-template-columns: 1fr 1fr;
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, .45);
+        border: 1px solid rgba(var(--theme-rgb), .16);
+      }
+
+      .extra-row select,
+      .extra-row .note {
+        grid-column: 1 / -1;
+      }
+
+      .history-main {
+        grid-template-columns: 24px 1fr auto;
+        min-height: 44px;
+      }
+
+      .history-main .hide-mobile,
+      .summary-line {
+        display: none;
+      }
+
+      .row-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+      }
+
+      .history-detail {
+        padding-left: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar" aria-label="左侧导航">
+    <a class="nav-item" data-nav-key="home" href="../home/index.html" title="主页">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      <span>主页</span>
+    </a>
+    <a class="nav-item active" data-nav-key="habitat" href="./index.html" title="栖息地">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 12 9-8 9 8"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg>
+      <span>栖息地</span>
+    </a>
+    <a class="nav-item" data-nav-key="journal" href="../plan-journal/index.html" title="计划日记">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-5"/></svg>
+      <span>计划日记</span>
+    </a>
+    <button class="nav-item" data-nav-key="bookmarks" type="button" title="网站收藏">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v18l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>
+      <span>网站收藏</span>
+    </button>
+    <a class="nav-item" data-nav-key="notes" href="../Note/index.html" title="文件整理">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
+      <span>文件整理</span>
+    </a>
+    <button class="add-widget" type="button" title="添加小组件">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    </button>
+    <button class="settings" type="button" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.73 7l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.5 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      <span>设置</span>
+    </button>
+  </aside>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="title-block">
+        <h1>栖息地 | Habitat</h1>
+        <p class="subtitle">记录身体、饮食与运动的日常变化 ⭐</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn ghost" id="exportBtn">↓ 导出数据</button>
+        <label class="btn ghost" for="importFile">↑ 导入数据</label>
+        <input id="importFile" type="file" accept="application/json,.json">
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="icon">📊</span>体重记录</h2>
+          <div class="date-pill">日期 <input id="dateInput" type="date"></div>
+        </div>
+
+        <div class="weight-layout">
+          <div class="stack">
+            <label for="weightInput">体重 kg</label>
+            <input class="input big-input" id="weightInput" type="number" min="0" step="0.1">
+            <p class="hint">同一天重复保存会自动更新</p>
+            <button class="btn primary" id="saveAllBtn">保存全部</button>
+            <button class="btn ghost" id="clearWeightBtn">清空输入</button>
+          </div>
+
+          <div>
+            <div class="chart-top">
+              <label>体重变化趋势</label>
+              <div class="filters">
+                <button class="chip" data-range="7">7天</button>
+                <button class="chip" data-range="30">30天</button>
+                <button class="chip active" data-range="all">全部</button>
+                <input class="month-input" id="chartMonth" type="month" title="按年月筛选">
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><small>最新体重</small><strong id="statLatest">-- kg</strong></div>
+          <div class="stat"><small>最高体重</small><strong id="statMax">-- kg</strong></div>
+          <div class="stat"><small>最低体重</small><strong id="statMin">-- kg</strong></div>
+          <div class="stat"><small>平均体重</small><strong id="statAvg">-- kg</strong></div>
+          <div class="stat"><small>相比上一次</small><strong id="statDelta">-- kg</strong></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="icon">🍔</span>今日饮食</h2>
+          <button class="btn ghost" id="clearMealsBtn">清空输入</button>
+        </div>
+        <div class="meal-list" id="mealList"></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="icon">🏃</span>运动记录</h2>
+          <button class="btn ghost" id="clearExerciseBtn">清空输入</button>
+        </div>
+
+        <div class="exercise-summary">
+          <div class="metric-box">
+            <div class="label-line">🚶 行走步数</div>
+            <input class="input metric-input" id="stepsInput" type="number" min="0" step="1">
+          </div>
+          <div class="metric-box">
+            <div class="label-line">🔥 消耗热量</div>
+            <div class="metric-value"><span id="calorieValue">0</span><span>kcal</span></div>
+            <p class="hint" style="text-align:center;margin-bottom:0;">自动换算 = steps × 0.04 kcal</p>
+          </div>
+        </div>
+
+        <div class="extra-head">
+          <label>额外运动</label>
+          <button class="round-btn" id="addExerciseBtn" title="增加一条额外运动">+</button>
+        </div>
+        <div class="extra-list" id="extraList"></div>
+      </article>
+
+      <article class="card history-panel">
+        <div class="card-head">
+          <h2 class="card-title"><span class="icon">🕘</span>历史记录</h2>
+          <div class="history-tools">
+            <button class="chip active" id="allHistoryBtn">全部记录</button>
+            <input class="month-input" id="historyMonth" type="month" title="按年月筛选">
+          </div>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">已保存</div>
+
+  <div class="modal" id="imageModal">
+    <div class="modal-box">
+      <img class="modal-image" id="modalImage" alt="饮食图片">
+      <div class="modal-actions">
+        <button class="btn ghost" id="prevImageBtn">上一张</button>
+        <button class="btn ghost" id="nextImageBtn">下一张</button>
+        <button class="btn primary" id="closeModalBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared-nav.js"></script>
+  <script>
+    const STORAGE_BASE_KEY = "habitat_records_v2";
+    const GUEST_SESSION_KEY = "portalGuestSession";
+    const meals = [
+      { key: "breakfast", name: "早餐", icon: "🍳", multi: false },
+      { key: "lunch", name: "午餐", icon: "🍱", multi: false },
+      { key: "dinner", name: "晚餐", icon: "🍲", multi: false },
+      { key: "other", name: "其他", icon: "☁️", multi: true }
+    ];
+    const exerciseTypes = ["🏃 跑步", "⛰️ 登山", "🚴 自行车", "🏊 游泳", "🧘 瑜伽", "🏋️ 力量训练", "🪢 跳绳", "✨ 其他"];
+
+    let records = {};
+    let chart;
+    let chartRange = "all";
+    let currentImages = [];
+    let currentImageIndex = 0;
+    let touchStartX = 0;
+
+    const $ = (id) => document.getElementById(id);
+
+    const isGuestSession = () => {
+      try {
+        return localStorage.getItem(GUEST_SESSION_KEY) === "1";
+      } catch {
+        return false;
+      }
+    };
+
+    const storageKey = () => isGuestSession() ? `guest:${STORAGE_BASE_KEY}` : STORAGE_BASE_KEY;
+
+    const applyTheme = (theme) => {
+      if (!theme) return;
+      document.documentElement.style.setProperty("--theme", theme.theme);
+      document.documentElement.style.setProperty("--theme-deep", theme.deep);
+      document.documentElement.style.setProperty("--theme-soft", theme.soft);
+      document.documentElement.style.setProperty("--theme-rgb", theme.rgb);
+    };
+
+    const readSavedTheme = () => {
+      try {
+        return JSON.parse(localStorage.getItem("theme") || "null");
+      } catch {
+        return null;
+      }
+    };
+
+    const bootSharedTools = () => {
+      const savedTheme = readSavedTheme();
+      if (savedTheme) applyTheme(savedTheme);
+
+    };
+    const today = () => new Date().toISOString().slice(0, 10);
+    const clone = (value) => JSON.parse(JSON.stringify(value));
+    const fmt = (num, digits = 1) => Number(num).toFixed(digits).replace(/\.0$/, "");
+    const kg = (value) => value === "" || value === null || value === undefined ? "--" : `${fmt(value)} kg`;
+    const numberOrEmpty = (value) => value === "" || value === null || value === undefined ? "" : Number(value);
+    const calories = (steps) => Math.round((Number(steps) || 0) * 0.04);
+    const formatSteps = (steps) => (Number(steps) || 0).toLocaleString("en-US");
+
+    function readRecords() {
+      try {
+        records = JSON.parse(localStorage.getItem(storageKey()) || "{}");
+      } catch (error) {
+        records = {};
+      }
+    }
+
+    function writeRecords() {
+      localStorage.setItem(storageKey(), JSON.stringify(records));
+    }
+
+    function defaultRecord(date) {
+      return {
+        date,
+        weight: "",
+        meals: {
+          breakfast: { text: "", images: [] },
+          lunch: { text: "", images: [] },
+          dinner: { text: "", images: [] },
+          other: { text: "", images: [] }
+        },
+        exercise: { steps: "", extras: [] }
+      };
+    }
+
+    function normalizeRecord(record, date) {
+      const base = defaultRecord(date || record.date || today());
+      const next = { ...base, ...record, date: date || record.date || base.date };
+      next.meals = { ...base.meals, ...(record.meals || {}) };
+      meals.forEach((meal) => {
+        next.meals[meal.key] = {
+          text: next.meals[meal.key]?.text || "",
+          images: Array.isArray(next.meals[meal.key]?.images) ? next.meals[meal.key].images : []
+        };
+      });
+      next.exercise = {
+        steps: record.exercise?.steps ?? "",
+        extras: Array.isArray(record.exercise?.extras) ? record.exercise.extras : []
+      };
+      return next;
+    }
+
+    function getCurrentFormRecord() {
+      const date = $("dateInput").value || today();
+      const record = defaultRecord(date);
+      record.weight = $("weightInput").value.trim();
+      meals.forEach((meal) => {
+        record.meals[meal.key].text = $(`${meal.key}Text`).value.trim();
+        record.meals[meal.key].images = getMealImages(meal.key);
+      });
+      record.exercise.steps = $("stepsInput").value.trim();
+      record.exercise.extras = [...document.querySelectorAll(".extra-row")].map((row) => ({
+        type: row.querySelector(".extra-type").value,
+        km: row.querySelector(".extra-km").value.trim(),
+        minutes: row.querySelector(".extra-minutes").value.trim(),
+        note: row.querySelector(".extra-note").value.trim()
+      })).filter((item) => item.type || item.km || item.minutes || item.note);
+      return record;
+    }
+
+    function getMealImages(key) {
+      return [...document.querySelectorAll(`#${key}Thumbs .thumb img`)].map((img) => img.src);
+    }
+
+    function renderMealInputs() {
+      $("mealList").innerHTML = meals.map((meal) => `
+        <div class="meal-row">
+          <div class="meal-name"><span>${meal.icon}</span>${meal.name}</div>
+          ${meal.multi
+            ? `<textarea id="${meal.key}Text" class="span-text"></textarea>`
+            : `<input id="${meal.key}Text" class="input" type="text">`}
+          <div class="thumbs" id="${meal.key}Thumbs"></div>
+          <label class="file-label" for="${meal.key}File">+ 上传照片</label>
+          <input id="${meal.key}File" type="file" accept="image/*" multiple>
+        </div>
+      `).join("");
+
+      meals.forEach((meal) => {
+        $(`${meal.key}File`).addEventListener("change", (event) => handleImageUpload(event, meal.key));
+      });
+    }
+
+    function handleImageUpload(event, key) {
+      const files = [...event.target.files];
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => addThumb(key, reader.result);
+        reader.readAsDataURL(file);
+      });
+      event.target.value = "";
+    }
+
+    function addThumb(key, src) {
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+      thumb.innerHTML = `<img src="${src}" alt="饮食图片"><button class="remove-img" type="button">×</button>`;
+      thumb.querySelector("button").addEventListener("click", () => thumb.remove());
+      $(`${key}Thumbs`).appendChild(thumb);
+    }
+
+    function setMealImages(key, images) {
+      const box = $(`${key}Thumbs`);
+      box.innerHTML = "";
+      images.forEach((src) => addThumb(key, src));
+    }
+
+    function fillForm(date) {
+      const record = normalizeRecord(records[date] || defaultRecord(date), date);
+      $("dateInput").value = date;
+      $("weightInput").value = record.weight;
+      meals.forEach((meal) => {
+        $(`${meal.key}Text`).value = record.meals[meal.key].text;
+        setMealImages(meal.key, record.meals[meal.key].images);
+      });
+      $("stepsInput").value = record.exercise.steps;
+      renderExtraExercises(record.exercise.extras);
+      updateCalories();
+    }
+
+    function clearWeight() {
+      $("weightInput").value = "";
+    }
+
+    function clearMeals() {
+      meals.forEach((meal) => {
+        $(`${meal.key}Text`).value = "";
+        $(`${meal.key}Thumbs`).innerHTML = "";
+      });
+    }
+
+    function clearExercise() {
+      $("stepsInput").value = "";
+      renderExtraExercises([]);
+      updateCalories();
+      updateHistoryVisibleRows();
+    }
+
+    function saveAll() {
+      const record = getCurrentFormRecord();
+      if (record.weight !== "") {
+        const weight = Number(record.weight);
+        if (!Number.isFinite(weight) || weight < 0) {
+          showToast("体重需要填写有效的非负数字");
+          return;
+        }
+        record.weight = weight;
+      }
+      if (record.exercise.steps !== "") {
+        const steps = Number(record.exercise.steps);
+        if (!Number.isFinite(steps) || steps < 0) {
+          showToast("步数需要填写有效的非负数字");
+          return;
+        }
+        record.exercise.steps = Math.round(steps);
+      }
+      record.exercise.extras = record.exercise.extras.map((item) => ({
+        type: item.type,
+        km: item.km,
+        minutes: item.minutes,
+        note: item.note
+      }));
+      records[record.date] = normalizeRecord(record, record.date);
+      writeRecords();
+      chartRange = "all";
+      $("chartMonth").value = "";
+      document.querySelectorAll("[data-range]").forEach((btn) => btn.classList.toggle("active", btn.dataset.range === "all"));
+      renderAll();
+      showToast("已保存");
+    }
+
+    function updateCalories() {
+      $("calorieValue").textContent = calories($("stepsInput").value);
+    }
+
+    function renderExtraExercises(items = []) {
+      const list = $("extraList");
+      list.innerHTML = "";
+      if (items.length) {
+        const labels = document.createElement("div");
+        labels.className = "extra-labels";
+        labels.innerHTML = "<span>运动类型</span><span>公里数</span><span>分钟</span><span>备注</span><span></span>";
+        list.appendChild(labels);
+      }
+      items.forEach((item) => addExtraExercise(item));
+      updateHistoryVisibleRows();
+    }
+
+    function addExtraExercise(item = {}) {
+      const list = $("extraList");
+      if (!list.querySelector(".extra-labels")) {
+        const labels = document.createElement("div");
+        labels.className = "extra-labels";
+        labels.innerHTML = "<span>运动类型</span><span>公里数</span><span>分钟</span><span>备注</span><span></span>";
+        list.appendChild(labels);
+      }
+      const row = document.createElement("div");
+      row.className = "extra-row";
+      row.innerHTML = `
+        <select class="extra-type">${exerciseTypes.map((type) => `<option value="${type}">${type}</option>`).join("")}</select>
+        <input class="input extra-km" type="number" min="0" step="0.1">
+        <input class="input extra-minutes" type="number" min="0" step="1">
+        <input class="input extra-note note" type="text">
+        <button class="round-btn" type="button" title="删除这条运动">-</button>
+      `;
+      row.querySelector(".extra-type").value = item.type || exerciseTypes[0];
+      row.querySelector(".extra-km").value = item.km || "";
+      row.querySelector(".extra-minutes").value = item.minutes || "";
+      row.querySelector(".extra-note").value = item.note || "";
+      row.querySelector("button").addEventListener("click", () => {
+        row.remove();
+        if (!list.querySelector(".extra-row")) list.innerHTML = "";
+        updateHistoryVisibleRows();
+      });
+      list.appendChild(row);
+      updateHistoryVisibleRows();
+    }
+
+    function weightEntries() {
+      return Object.values(records)
+        .map((record) => normalizeRecord(record))
+        .filter((record) => record.weight !== "" && Number.isFinite(Number(record.weight)))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function filteredWeightEntries() {
+      const month = $("chartMonth").value;
+      let entries = weightEntries();
+      if (month) return entries.filter((item) => item.date.startsWith(month));
+      if (chartRange === "all") return entries;
+      const days = Number(chartRange);
+      const last = entries.at(-1)?.date || today();
+      const end = new Date(`${last}T00:00:00`);
+      const start = new Date(end);
+      start.setDate(start.getDate() - days + 1);
+      return entries.filter((item) => {
+        const date = new Date(`${item.date}T00:00:00`);
+        return date >= start && date <= end;
+      });
+    }
+
+    function renderChart() {
+      const entries = filteredWeightEntries();
+      const ctx = $("weightChart");
+      const rootStyles = getComputedStyle(document.documentElement);
+      const themeRgb = rootStyles.getPropertyValue("--theme-rgb").trim() || "127, 169, 235";
+      const themeDeep = rootStyles.getPropertyValue("--theme-deep").trim() || "#6f92cf";
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: entries.map((item) => item.date),
+          datasets: [{
+            label: "体重 kg",
+            data: entries.map((item) => Number(item.weight)),
+            tension: .42,
+            borderColor: themeDeep,
+            backgroundColor: `rgba(${themeRgb}, .15)`,
+            pointBackgroundColor: "#ffffff",
+            pointBorderColor: themeDeep,
+            pointBorderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => items[0].label,
+                label: (item) => `体重: ${fmt(item.raw)} kg`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { color: `rgba(${themeRgb}, .12)` }, ticks: { color: themeDeep, maxRotation: 0 } },
+            y: { grid: { color: `rgba(${themeRgb}, .13)` }, ticks: { color: themeDeep } }
+          }
+        }
+      });
+      renderStats(entries.length ? entries : weightEntries());
+    }
+
+    function renderStats(entries) {
+      if (!entries.length) {
+        ["statLatest", "statMax", "statMin", "statAvg", "statDelta"].forEach((id) => $(id).textContent = "-- kg");
+        return;
+      }
+      const values = entries.map((item) => Number(item.weight));
+      const latest = values.at(-1);
+      const previous = values.length > 1 ? values.at(-2) : null;
+      $("statLatest").textContent = kg(latest);
+      $("statMax").textContent = kg(Math.max(...values));
+      $("statMin").textContent = kg(Math.min(...values));
+      $("statAvg").textContent = kg(values.reduce((sum, value) => sum + value, 0) / values.length);
+      $("statDelta").textContent = previous === null ? "-- kg" : `${latest - previous >= 0 ? "+" : ""}${fmt(latest - previous)} kg`;
+    }
+
+    function mealSummary(record) {
+      const parts = meals.map((meal) => {
+        const text = record.meals[meal.key]?.text || "";
+        return text ? meal.name : "";
+      }).filter(Boolean);
+      return parts.length ? parts.join(", ") : "无";
+    }
+
+    function mealDetail(record) {
+      return meals.map((meal) => {
+        const item = record.meals[meal.key];
+        return `${meal.name}：${item?.text || "无"}`;
+      }).join("；");
+    }
+
+    function exerciseDetail(record) {
+      const steps = Number(record.exercise.steps) || 0;
+      const lines = [`步数：${formatSteps(steps)}（消耗热量：${calories(steps)} kcal）`];
+      record.exercise.extras.forEach((item) => {
+        const note = item.note ? `（备注：${escapeHtml(item.note)}）` : "";
+        const kmText = item.km ? `${escapeHtml(item.km)}km` : "";
+        const minText = item.minutes ? `${escapeHtml(item.minutes)}min` : "";
+        lines.push(`${escapeHtml(item.type)} ${kmText} ${minText}${note}`.replace(/\s+/g, " ").trim());
+      });
+      return lines.join("<br>");
+    }
+
+    function renderHistory() {
+      const month = $("historyMonth").value;
+      const list = $("historyList");
+      const items = Object.values(records)
+        .map((record) => normalizeRecord(record))
+        .filter((record) => !month || record.date.startsWith(month))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      if (!items.length) {
+        list.innerHTML = `<div class="empty">暂无记录</div>`;
+        return;
+      }
+
+      list.innerHTML = items.map((record) => {
+        const steps = Number(record.exercise.steps) || 0;
+        return `
+          <div class="history-card" data-date="${record.date}">
+            <button class="history-main" type="button" data-action="toggle">
+              <span class="arrow">&gt;</span>
+              <strong>${record.date}</strong>
+              <span class="hide-mobile">${kg(record.weight)}</span>
+              <span class="summary-line">${mealSummary(record)}</span>
+              <span class="hide-mobile">${formatSteps(steps)} 步</span>
+              <span class="row-actions">
+                <span class="link-btn" data-action="edit">编辑</span>
+                <span class="link-btn danger" data-action="delete">删除</span>
+              </span>
+            </button>
+            <div class="history-detail">
+              <div class="detail-section"><strong>饮食：</strong>${escapeHtml(mealDetail(record))}</div>
+              <div class="image-links">${imageLinks(record)}</div>
+              <div class="detail-section"><strong>运动：</strong>${exerciseDetail(record)}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function imageLinks(record) {
+      return meals.map((meal) => {
+        const count = record.meals[meal.key]?.images?.length || 0;
+        return count ? `<button class="link-btn" data-action="images" data-meal="${meal.key}">查看${meal.name}图片</button>` : "";
+      }).join("");
+    }
+
+    function handleHistoryClick(event) {
+      const actionTarget = event.target.closest("[data-action]");
+      const card = event.target.closest(".history-card");
+      if (!actionTarget || !card) return;
+      const action = actionTarget.dataset.action;
+      const date = card.dataset.date;
+      if (action === "toggle") {
+        card.classList.toggle("open");
+        card.querySelector(".arrow").textContent = card.classList.contains("open") ? "v" : ">";
+      }
+      if (action === "edit") {
+        fillForm(date);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        showToast("已回填，可以继续编辑");
+      }
+      if (action === "delete") {
+        if (confirm(`确认删除 ${date} 的记录吗？`)) {
+          delete records[date];
+          writeRecords();
+          renderAll();
+          showToast("已删除");
+        }
+      }
+      if (action === "images") {
+        const meal = actionTarget.dataset.meal;
+        openImages(records[date].meals[meal].images);
+      }
+    }
+
+    function openImages(images) {
+      currentImages = images || [];
+      currentImageIndex = 0;
+      if (!currentImages.length) return;
+      updateModalImage();
+      $("imageModal").classList.add("show");
+    }
+
+    function updateModalImage() {
+      $("modalImage").src = currentImages[currentImageIndex];
+    }
+
+    function nextImage(step) {
+      if (!currentImages.length) return;
+      currentImageIndex = (currentImageIndex + step + currentImages.length) % currentImages.length;
+      updateModalImage();
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `habitat-records-${today()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!confirm("导入会按日期合并，同一天记录会被导入文件中的同日期记录覆盖。确认继续吗？")) {
+        event.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const incoming = JSON.parse(reader.result);
+          Object.entries(incoming).forEach(([date, record]) => {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+              records[date] = normalizeRecord(record, date);
+            }
+          });
+          writeRecords();
+          fillForm($("dateInput").value || today());
+          renderAll();
+          showToast("导入完成");
+        } catch (error) {
+          showToast("导入失败，请检查 JSON 文件");
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function showToast(message) {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function renderAll() {
+      renderChart();
+      renderHistory();
+      updateHistoryVisibleRows();
+    }
+
+    function updateHistoryVisibleRows() {
+      const list = $("historyList");
+      if (!list) return;
+      const extraCount = document.querySelectorAll(".extra-row").length;
+      const visibleRows = Math.min(10, 5 + Math.max(0, extraCount - 1));
+      list.style.setProperty("--history-visible-rows", visibleRows);
+    }
+
+    function bindEvents() {
+      $("dateInput").addEventListener("change", (event) => fillForm(event.target.value));
+      $("saveAllBtn").addEventListener("click", saveAll);
+      $("clearWeightBtn").addEventListener("click", clearWeight);
+      $("clearMealsBtn").addEventListener("click", clearMeals);
+      $("clearExerciseBtn").addEventListener("click", clearExercise);
+      $("stepsInput").addEventListener("input", updateCalories);
+      $("addExerciseBtn").addEventListener("click", () => addExtraExercise());
+      $("historyList").addEventListener("click", handleHistoryClick);
+      $("exportBtn").addEventListener("click", exportData);
+      $("importFile").addEventListener("change", importData);
+      $("historyMonth").addEventListener("change", () => {
+        $("allHistoryBtn").classList.toggle("active", !$("historyMonth").value);
+        renderHistory();
+      });
+      $("allHistoryBtn").addEventListener("click", () => {
+        $("historyMonth").value = "";
+        $("allHistoryBtn").classList.add("active");
+        renderHistory();
+      });
+      $("chartMonth").addEventListener("change", () => {
+        document.querySelectorAll("[data-range]").forEach((btn) => btn.classList.remove("active"));
+        renderChart();
+      });
+      document.querySelectorAll("[data-range]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          chartRange = btn.dataset.range;
+          $("chartMonth").value = "";
+          document.querySelectorAll("[data-range]").forEach((item) => item.classList.toggle("active", item === btn));
+          renderChart();
+        });
+      });
+      $("closeModalBtn").addEventListener("click", () => $("imageModal").classList.remove("show"));
+      $("prevImageBtn").addEventListener("click", () => nextImage(-1));
+      $("nextImageBtn").addEventListener("click", () => nextImage(1));
+      $("imageModal").addEventListener("click", (event) => {
+        if (event.target.id === "imageModal") $("imageModal").classList.remove("show");
+      });
+      $("imageModal").addEventListener("touchstart", (event) => {
+        touchStartX = event.changedTouches[0].clientX;
+      }, { passive: true });
+      $("imageModal").addEventListener("touchend", (event) => {
+        const distance = event.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(distance) > 45) nextImage(distance < 0 ? 1 : -1);
+      }, { passive: true });
+    }
+
+    function init() {
+      readRecords();
+      renderMealInputs();
+      $("dateInput").value = today();
+      fillForm(today());
+      bootSharedTools();
+      bindEvents();
+      renderAll();
+    }
+
+    init();
+  </script>
+</body>
+</html>
+

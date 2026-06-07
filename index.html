@@ -3,10 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Web</title>
-  <meta http-equiv="refresh" content="0; url=v3.0/home/index.html">
+  <title>Personal Portal</title>
+  <meta http-equiv="refresh" content="0; url=v4.0/index.html">
+  <script>
+    const target = new URL("v4.0/index.html", window.location.href);
+    target.search = window.location.search;
+    target.hash = window.location.hash;
+    window.location.replace(target.href);
+  </script>
 </head>
 <body>
-  <a href="v3.0/home/index.html">&#36827;&#20837;&#20027;&#39029;</a>
+  <a href="v4.0/index.html">&#36827;&#20837;&#20010;&#20154;&#38376;&#25143;</a>
 </body>
 </html>

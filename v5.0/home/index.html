@@ -1,0 +1,187 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Web</title>
+  <script>
+    (() => {
+      if (window.top !== window.self) document.documentElement.classList.add("portal-embedded");
+      try {
+        const theme = JSON.parse(localStorage.getItem("theme") || "null");
+        if (!theme) return;
+        const root = document.documentElement;
+        if (theme.theme) root.style.setProperty("--theme", theme.theme);
+        if (theme.deep) root.style.setProperty("--theme-deep", theme.deep);
+        if (theme.soft) root.style.setProperty("--theme-soft", theme.soft);
+        if (theme.rgb) root.style.setProperty("--theme-rgb", theme.rgb);
+      } catch {}
+    })();
+  </script>
+  <style>
+    .top-tools .player {
+      display: none !important;
+    }
+    html.portal-embedded .sidebar,
+    html.portal-embedded .account-dock {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  </style>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="sticky-note.css">
+</head>
+<body class="logged-out no-custom-avatar auth-pending">
+  <div class="page">
+    <aside class="sidebar" aria-label="左侧导航">
+      <button class="nav-item active" data-nav-key="home" type="button" title="主页">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        <span>主页</span>
+      </button>
+      <a class="nav-item" data-nav-key="habitat" href="../Habitat/index.html" title="栖息地">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 12 9-8 9 8"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg>
+        <span>栖息地</span>
+      </a>
+      <a class="nav-item" data-nav-key="journal" href="../plan-journal/index.html" title="计划日记">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-5"/></svg>
+        <span>计划日记</span>
+      </a>
+      <button class="nav-item" data-nav-key="bookmarks" type="button" title="网站收藏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v18l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>
+        <span>网站收藏</span>
+      </button>
+      <a class="nav-item" data-nav-key="notes" href="../Note/index.html" title="文件整理">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
+        <span>文件整理</span>
+      </a>
+      <button class="add-widget" id="addWidget" type="button" title="添加小组件">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      </button>
+      <div class="widget-menu" id="widgetMenu" aria-label="小组件选择">
+        <button class="widget-option" id="addBubbleOption" type="button">🫧 气泡</button>
+        <button class="widget-option" id="addStickyNoteOption" type="button">📝 便签</button>
+      </div>
+      <button class="settings" id="settingsButton" type="button" title="设置" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.5 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        <span>设置</span>
+      </button>
+      <div class="settings-menu" id="settingsMenu" aria-label="设置菜单">
+        <button class="settings-action" data-global-action="reorder" type="button">调整组件位置</button>
+        <button class="settings-save-action" data-global-action="save-order" type="button" hidden>保存顺序</button>
+        <button class="danger-action" id="signOutMenuBtn" data-global-action="sign-out" type="button">退出登录</button>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <section class="top-tools" aria-label="播放器与背景颜色">
+        <div class="player">
+          <div class="cover" aria-hidden="true"></div>
+          <div>
+            <p class="song-title">Dream It Possible</p>
+            <p class="artist">Delacey</p>
+          </div>
+          <button class="player-btn skip" type="button" title="上一首">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m11 17-7-5 7-5v10Z"/><path d="M20 18V6"/></svg>
+          </button>
+          <button class="player-btn play" id="playButton" type="button" title="播放">
+            <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7Z"/></svg>
+          </button>
+          <button class="player-btn skip" type="button" title="下一首">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m13 7 7 5-7 5V7Z"/><path d="M4 6v12"/></svg>
+          </button>
+        </div>
+
+        <div class="color-wrap">
+          <button class="color-toggle" id="colorToggle" type="button" aria-expanded="false" title="主题颜色">
+            <span class="current-color" id="currentColor"></span>
+          </button>
+          <div class="palette" id="palette">
+            <p class="palette-title">主题颜色</p>
+            <div class="palette-row">
+              <svg class="palette-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
+              <button class="swatch" style="--swatch:#e9a7ad" data-theme="#e9a7ad" data-deep="#c9838a" data-soft="#f3c4c8" data-rgb="233,167,173" type="button" title="樱粉"></button>
+              <button class="swatch" style="--swatch:#e8b184" data-theme="#e8b184" data-deep="#c58b62" data-soft="#f2ceb3" data-rgb="232,177,132" type="button" title="杏橙"></button>
+              <button class="swatch" style="--swatch:#dcc86e" data-theme="#dcc86e" data-deep="#b39d4d" data-soft="#efe1a9" data-rgb="220,200,110" type="button" title="奶黄"></button>
+              <button class="swatch" style="--swatch:#9fcfac" data-theme="#9fcfac" data-deep="#73a883" data-soft="#c7e8cf" data-rgb="159,207,172" type="button" title="薄荷"></button>
+              <button class="swatch active" style="--swatch:#a9caff" data-theme="#7fa9eb" data-deep="#6f92cf" data-soft="#a9caff" data-rgb="127,169,235" type="button" title="浅蓝"></button>
+              <button class="swatch" style="--swatch:#b8a7e6" data-theme="#a995dc" data-deep="#8a76bd" data-soft="#c8b8eb" data-rgb="169,149,220" type="button" title="薰衣草"></button>
+              <button class="swatch" style="--swatch:#d8b7e6" data-theme="#c99add" data-deep="#aa79bf" data-soft="#e4cdef" data-rgb="201,154,221" type="button" title="雾紫"></button>
+              <svg class="palette-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+            <div class="palette-mark"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="account-dock" aria-label="账号">
+        <button class="account-toggle" id="accountToggle" type="button" aria-expanded="false" title="账号登录">
+          <span class="account-avatar" aria-hidden="true"></span>
+        </button>
+        <div class="account-panel" id="accountPanel">
+          <div class="account-copy">
+            <strong id="accountTitle">未登录</strong>
+            <span id="accountStatus">登录后，网站中的数据内容可同步到你的 Supabase 账号。</span>
+          </div>
+          <input id="accountEmail" type="email" autocomplete="email" placeholder="邮箱" />
+          <input id="accountPassword" type="password" autocomplete="current-password" placeholder="密码" />
+          <div class="account-actions">
+            <button class="account-ghost" id="accountSignUp" type="button">注册</button>
+            <button class="account-primary" id="accountSignIn" type="button">登录</button>
+          </div>
+          <button class="account-guest" id="accountGuest" type="button">游客登录</button>
+          <p class="guest-note" id="guestNote">游客登录状态下，在此网站内所有保存的内容仅保存于本地浏览器。</p>
+        </div>
+      </section>
+
+      <section class="orbit" id="orbit" aria-label="个人主页气泡">
+        <div class="orbit-ring" aria-hidden="true"></div>
+        <div class="profile">
+          <button class="avatar-shell" id="avatarButton" type="button" title="点击上传头像">
+            <img class="avatar" id="avatarImage" src="images/avatar.png" alt="lizlei 的头像">
+          </button>
+          <input id="avatarInput" type="file" accept="image/*" hidden>
+          <div class="name editable-text" id="username" tabindex="0" data-fallback="User">User</div>
+          <div class="tagline editable-text" id="signature" tabindex="0" data-fallback="生活明朗，万物可爱。">生活明朗，万物可爱。✨</div>
+        </div>
+
+        <button class="bubble large" data-angle="250" data-radius-x=".43" data-radius-y=".35" type="button">╰( ᐖ )╯</button>
+        <button class="bubble large" data-angle="300" data-radius-x=".42" data-radius-y=".34" type="button">听歌<br>ing<br>♪</button>
+        <button class="bubble medium" data-angle="75" data-radius-x=".41" data-radius-y=".33" type="button">(｡･ω･｡)ﾉ♡</button>
+        <button class="bubble large" data-angle="125" data-radius-x=".42" data-radius-y=".35" type="button">学生党<br>📖</button>
+        <button class="bubble large" data-angle="205" data-radius-x=".38" data-radius-y=".36" type="button">宅</button>
+        <button class="bubble small" data-angle="180" data-radius-x=".51" data-radius-y=".25" type="button" aria-label="装饰气泡"></button>
+        <button class="bubble small" data-angle="352" data-radius-x=".49" data-radius-y=".23" type="button" aria-label="装饰气泡"></button>
+        <button class="bubble small" data-angle="285" data-radius-x=".36" data-radius-y=".43" type="button" aria-label="装饰气泡"></button>
+      </section>
+
+      <section class="sticky-notes-layer" id="stickyNotesLayer" aria-label="便签小组件"></section>
+      <div class="bubble-hint" id="bubbleHint">点击气泡选中，按 Delete 删除；双击可编辑，拖动可调整位置</div>
+      <div class="toast" id="toast"></div>
+    </main>
+  </div>
+
+  <div class="crop-modal" id="cropModal" aria-hidden="true">
+    <div class="crop-panel" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+      <p class="crop-title" id="cropTitle">裁剪头像</p>
+      <div class="crop-frame" id="cropFrame">
+        <img class="crop-image" id="cropImage" alt="">
+      </div>
+      <div class="crop-controls">
+        <input class="crop-zoom" id="cropZoom" type="range" min="1" max="3" step="0.01" value="1" aria-label="缩放头像">
+        <div class="crop-actions">
+          <button class="crop-action" id="cropCancel" type="button">取消</button>
+          <button class="crop-action primary" id="cropSave" type="button">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase-config.js"></script>
+  <script src="../shared-nav.js"></script>
+  <script src="script.js"></script>
+  <script src="sticky-note.js"></script>
+</body>
+</html>
+

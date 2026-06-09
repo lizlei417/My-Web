@@ -425,6 +425,10 @@
       line-height: 1.45;
     }
 
+    .shell-account-copy span:empty {
+      display: none;
+    }
+
     .shell-account-panel input {
       width: 100%;
       height: 40px;
@@ -1275,6 +1279,10 @@
         return route;
       };
 
+      const isHomeRoute = (route) => normalizeRoute(route).startsWith("home/");
+      const hasRememberedSession = localStorage.getItem("portalGuestSession") === "1"
+        || Boolean(localStorage.getItem("portalCurrentUserId"));
+
       const setRouteStyle = (route) => {
         const clean = route.split(/[?#]/)[0];
         document.body.classList.toggle("route-home", clean.startsWith("home/"));
@@ -1295,9 +1303,12 @@
       };
 
       const requestedRoute = normalizeRoute(params.get("page"));
-      let currentRoute = requestedRoute;
-      frame.src = requestedRoute;
-      setRouteStyle(requestedRoute);
+      const initialRoute = hasRememberedSession || isHomeRoute(requestedRoute)
+        ? requestedRoute
+        : "home/index.html";
+      let currentRoute = initialRoute;
+      frame.src = initialRoute;
+      setRouteStyle(initialRoute);
 
       const updateAddress = (route, replace = false) => {
         const url = new URL(window.location.href);
@@ -1307,12 +1318,26 @@
         setRouteStyle(route);
       };
 
-      const navigateTo = (route) => {
+      if (initialRoute !== requestedRoute) updateAddress(initialRoute, true);
+
+      const showLoginRequired = () => {
+        setAccountMessage("请先登录", "登录账号或选择游客登录后，即可使用其他组件。");
+        setWidgetMenuOpen(false);
+        settingsMenu.classList.remove("open");
+        setAccountOpen(true);
+      };
+
+      const navigateTo = (route, replace = false) => {
         const next = normalizeRoute(route);
+        if (!shellUser && !isHomeRoute(next)) {
+          showLoginRequired();
+          return false;
+        }
         if (currentRoute === next) return;
         currentRoute = next;
         frame.src = next;
-        updateAddress(next);
+        updateAddress(next, replace);
+        return true;
       };
 
       navItems.forEach((item) => {
@@ -1324,6 +1349,12 @@
           if (reorderMode) {
             event.preventDefault();
             event.stopPropagation();
+            return;
+          }
+          if (!shellUser && item.dataset.routeKey !== "home") {
+            event.preventDefault();
+            event.stopPropagation();
+            showLoginRequired();
             return;
           }
           navigateTo(item.dataset.route);
@@ -1607,6 +1638,11 @@
 
       window.addEventListener("popstate", (event) => {
         const route = normalizeRoute(event.state?.route || new URLSearchParams(window.location.search).get("page"));
+        if (!shellUser && !isHomeRoute(route)) {
+          navigateTo("home/index.html", true);
+          showLoginRequired();
+          return;
+        }
         if (currentRoute !== route) {
           currentRoute = route;
           frame.src = route;
@@ -1660,7 +1696,7 @@
         accountActions.hidden = signedIn;
         guestButton.hidden = signedIn;
         signOutButton.hidden = !signedIn;
-        guestNote.hidden = Boolean(user);
+        guestNote.hidden = !guest;
         if (user) {
           localStorage.setItem("portalCurrentUserId", user.id || "");
           localStorage.setItem("portalCurrentUserEmail", user.email || "");
@@ -1668,11 +1704,12 @@
         } else if (guest) {
           localStorage.setItem("portalCurrentUserId", "guest");
           localStorage.removeItem("portalCurrentUserEmail");
-          setAccountMessage("游客登录", "网站数据仅保存在当前浏览器。");
+          setAccountMessage("游客登录", "");
         } else {
           localStorage.removeItem("portalCurrentUserId");
           localStorage.removeItem("portalCurrentUserEmail");
           setAccountMessage("未登录", "登录后，网站中的数据内容可同步到你的 Supabase 账号。");
+          if (!isHomeRoute(currentRoute)) navigateTo("home/index.html", true);
         }
         applyNavLayout();
         renderWidgetMenu();

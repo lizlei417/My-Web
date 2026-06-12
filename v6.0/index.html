@@ -1061,6 +1061,7 @@
       <div class="shell-widget-divider" hidden></div>
       <div class="shell-widget-home-options">
         <button data-widget-action="bubble" type="button">🫧 气泡</button>
+        <button data-widget-action="money-ledger" type="button">💰 钱记</button>
         <button data-widget-action="sticky-note" type="button">📝 便签</button>
       </div>
       <p class="shell-widget-empty" hidden>暂无可恢复的组件</p>
@@ -1161,6 +1162,7 @@
       const widgetHomeOptions = widgetMenu.querySelector(".shell-widget-home-options");
       const widgetEmpty = widgetMenu.querySelector(".shell-widget-empty");
       const addBubbleButton = widgetMenu.querySelector("[data-widget-action='bubble']");
+      const addMoneyLedgerButton = widgetMenu.querySelector("[data-widget-action='money-ledger']");
       const addStickyNoteButton = widgetMenu.querySelector("[data-widget-action='sticky-note']");
       const settingsButton = document.querySelector(".shell-settings");
       const settingsMenu = document.querySelector(".shell-settings-menu");
@@ -1404,6 +1406,22 @@
         }
       };
 
+      const showHomeMoneyLedger = () => {
+        try {
+          frame.contentWindow.postMessage({
+            type: "portal:show-home-money-ledger",
+            user: {
+              id: shellUser?.id || "",
+              email: shellUser?.email || "",
+              isGuest: Boolean(shellUser?.isGuest)
+            }
+          }, "*");
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
       const closeGardenDialog = (value) => {
         if (!gardenDialogResolve) return;
         const resolve = gardenDialogResolve;
@@ -1592,6 +1610,18 @@
           return;
         }
         addHomeStickyNote();
+        setWidgetMenuOpen(false);
+      });
+
+      addMoneyLedgerButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!currentRoute.startsWith("home/")) return;
+        if (!shellUser) {
+          setWidgetMenuOpen(false);
+          setAccountOpen(true);
+          return;
+        }
+        showHomeMoneyLedger();
         setWidgetMenuOpen(false);
       });
 

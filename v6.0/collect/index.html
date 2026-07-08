@@ -1109,11 +1109,14 @@
         modalBackdrop.classList.add("open");
         modalBackdrop.setAttribute("aria-hidden", "false");
 
+        let pointerStartedOnBackdrop = false;
+
         const close = (value) => {
           modalBackdrop.classList.remove("open");
           modalBackdrop.setAttribute("aria-hidden", "true");
           modalActions.onclick = null;
           modalBackdrop.onclick = null;
+          modalBackdrop.onpointerdown = null;
           document.removeEventListener("keydown", onKeydown);
           resolve(value);
         };
@@ -1138,8 +1141,12 @@
             close(result);
           }
         };
+        modalBackdrop.onpointerdown = (event) => {
+          pointerStartedOnBackdrop = event.target === modalBackdrop;
+        };
         modalBackdrop.onclick = (event) => {
-          if (event.target === modalBackdrop) close(null);
+          if (event.target === modalBackdrop && pointerStartedOnBackdrop) close(null);
+          pointerStartedOnBackdrop = false;
         };
         document.addEventListener("keydown", onKeydown);
         setTimeout(() => modalFields.querySelector("input")?.focus(), 40);
@@ -1542,6 +1549,15 @@
 
     document.addEventListener("click", (event) => {
       if (event.target.closest(".link-row")) return;
+      if (
+        editingCardId &&
+        !event.target.closest(".bookmark-card, .card-menu, .more-btn, .modal-backdrop, .collect-modal, .add-card, .search-box")
+      ) {
+        editingCardId = null;
+        openMenuId = null;
+        render();
+        return;
+      }
       if (!event.target.closest(".card-menu, .more-btn")) {
         openMenuId = null;
         render();

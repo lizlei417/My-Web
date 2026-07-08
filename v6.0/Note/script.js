@@ -103,6 +103,7 @@ let subjectDetailSort = {
   direction: "desc"
 };
 let subjectDetailFolderId = "";
+let modalPointerStartedOnBackdrop = false;
 
 render();
 updateStorageHint();
@@ -117,8 +118,12 @@ fileInput.addEventListener("change", () => {
   if (fileInput.files.length) openUploadModal([...fileInput.files]);
 });
 modalClose.addEventListener("click", closeModal);
+modalBackdrop.addEventListener("pointerdown", (event) => {
+  modalPointerStartedOnBackdrop = event.target === modalBackdrop;
+});
 modalBackdrop.addEventListener("click", (event) => {
-  if (event.target === modalBackdrop) closeModal();
+  if (event.target === modalBackdrop && modalPointerStartedOnBackdrop) closeModal();
+  modalPointerStartedOnBackdrop = false;
 });
 
 ["dragenter", "dragover"].forEach((eventName) => {
@@ -488,6 +493,18 @@ document.addEventListener("pointermove", (event) => {
 
 document.addEventListener("pointerup", finishSubjectDrag);
 document.addEventListener("pointercancel", finishSubjectDrag);
+
+document.addEventListener("pointerdown", (event) => {
+  if (!quickEditMode) return;
+  if (
+    event.target.closest(
+      ".subject-card.editing, #quickEditButton, .modal-backdrop, .quick-panel, .right-stack, .search-shell, button, a, input, textarea, select, [contenteditable='true']"
+    )
+  ) {
+    return;
+  }
+  toggleQuickEdit();
+});
 
 function startSubjectDrag(card, event) {
   syncSubjectDraftText();

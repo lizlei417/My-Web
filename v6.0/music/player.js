@@ -136,7 +136,8 @@
 
   const getSavedState = () => {
     try {
-      return JSON.parse(localStorage.getItem(STATE_KEY) || "{}");
+      const key = currentUser ? `user:${currentUser.id}:${STATE_KEY}` : STATE_KEY;
+      return JSON.parse(localStorage.getItem(key) || "{}");
     } catch {
       return {};
     }
@@ -171,7 +172,8 @@
       const track = playlist[currentIndex];
       if (!track) return;
       try {
-        localStorage.setItem(STATE_KEY, JSON.stringify({
+        const key = currentUser ? `user:${currentUser.id}:${STATE_KEY}` : STATE_KEY;
+        localStorage.setItem(key, JSON.stringify({
           trackId: track.id,
           currentTime: audio.currentTime || 0,
           playing: !audio.paused && !audio.ended,

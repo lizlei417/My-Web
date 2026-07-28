@@ -879,9 +879,14 @@
     </section>
   </div>
 
+  <script src="../account-data.js"></script>
   <script src="../shared-nav.js"></script>
   <script>
     const STORAGE_KEY = "portalCollectCards";
+    const accountStorageKey = () => {
+      const userId = localStorage.getItem("portalCurrentUserId") || "";
+      return userId && userId !== "guest" ? `user:${userId}:${STORAGE_KEY}` : STORAGE_KEY;
+    };
     const cardsGrid = document.getElementById("cardsGrid");
     const searchInput = document.getElementById("searchInput");
     const modalBackdrop = document.getElementById("modalBackdrop");
@@ -942,7 +947,7 @@
 
     function loadCards() {
       try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        const saved = JSON.parse(localStorage.getItem(accountStorageKey()) || "null");
         if (Array.isArray(saved) && saved.length) return normalizeCards(saved);
       } catch {}
       return normalizeCards(structuredClone(defaultCards));
@@ -965,7 +970,7 @@
 
     function saveCards() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+        localStorage.setItem(accountStorageKey(), JSON.stringify(cards));
       } catch {}
     }
 

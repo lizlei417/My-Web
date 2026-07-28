@@ -297,6 +297,7 @@
       window.portalCurrentUser = currentUser
         ? { id: currentUser.id, email: currentUser.email || "", isGuest: Boolean(currentUser.isGuest) }
         : null;
+      window.PortalAccountData?.useUser(window.portalCurrentUser);
       window.dispatchEvent(new CustomEvent("portal:session-changed", { detail: window.portalCurrentUser }));
       sessionResolved = true;
       accountDock.classList.toggle("signed-in", Boolean(currentUser));

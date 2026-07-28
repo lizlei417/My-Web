@@ -1278,6 +1278,7 @@
     </div>
   </div>
 
+  <script src="../account-data.js"></script>
   <script src="../shared-nav.js"></script>
   <script>
     const STORAGE_BASE_KEY = "habitat_records_v2";
@@ -1307,7 +1308,11 @@
       }
     };
 
-    const storageKey = () => isGuestSession() ? `guest:${STORAGE_BASE_KEY}` : STORAGE_BASE_KEY;
+    const storageKey = () => {
+      if (isGuestSession()) return `guest:${STORAGE_BASE_KEY}`;
+      const userId = localStorage.getItem("portalCurrentUserId") || "";
+      return userId ? `user:${userId}:${STORAGE_BASE_KEY}` : STORAGE_BASE_KEY;
+    };
 
     const applyTheme = (theme) => {
       if (!theme) return;

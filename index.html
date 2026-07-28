@@ -1138,6 +1138,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="account-data.js"></script>
   <script src="music/player.js"></script>
   <script>
     (() => {
@@ -1721,6 +1722,7 @@
         const user = session?.user || null;
         const signedIn = Boolean(user || guest);
         shellUser = user || (guest ? { id: "guest", email: "游客", isGuest: true } : null);
+        window.PortalAccountData?.useUser(shellUser);
         accountDock.classList.toggle("signed-in", signedIn);
         accountEmail.hidden = signedIn;
         accountPassword.hidden = signedIn;

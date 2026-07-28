@@ -19,9 +19,49 @@
   const subscribers = new Set();
   let client = null;
   let currentUser = null;
+  let lastReadyUserId = "";
   let syncVersion = 0;
   let dependencyPromise = null;
   let bootPromise = null;
+
+  const isPortalShell = () => (
+    window.top === window
+    && Boolean(document.getElementById("portalFrame"))
+  );
+
+  const setShellSyncGuard = (visible) => {
+    if (!isPortalShell()) return;
+    let guard = document.getElementById("portalAccountSyncGuard");
+    if (!visible) {
+      guard?.remove();
+      return;
+    }
+    if (guard) return;
+    guard = document.createElement("div");
+    guard.id = "portalAccountSyncGuard";
+    guard.setAttribute("role", "status");
+    guard.setAttribute("aria-live", "polite");
+    guard.innerHTML = "<span>正在恢复账号数据…</span>";
+    Object.assign(guard.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "2147483647",
+      display: "grid",
+      placeItems: "center",
+      color: "#6f9de5",
+      font: "600 15px/1.5 system-ui, sans-serif",
+      background: "rgba(248, 251, 255, .82)",
+      backdropFilter: "blur(8px)"
+    });
+    const label = guard.firstElementChild;
+    Object.assign(label.style, {
+      padding: "14px 22px",
+      borderRadius: "999px",
+      background: "rgba(255, 255, 255, .94)",
+      boxShadow: "0 16px 42px rgba(90, 125, 184, .16)"
+    });
+    document.body.appendChild(guard);
+  };
 
   const loadScript = (src) => new Promise((resolve) => {
     const absolute = new URL(src, portalRoot).href;
@@ -149,7 +189,9 @@
     const version = ++syncVersion;
     if (!user?.id || user.isGuest) {
       currentUser = user || null;
+      lastReadyUserId = "";
       mappingsByLocalKey.clear();
+      setShellSyncGuard(false);
       notify({ state: "local", user: currentUser });
       return;
     }
@@ -157,6 +199,7 @@
     const activeClient = await ensureDependencies();
     if (!activeClient || version !== syncVersion) return;
     currentUser = user;
+    const allowShellReload = lastReadyUserId !== user.id;
     const localIdentityChanged = localStorage.getItem("portalCurrentUserId") !== user.id;
     originalSetItem.call(localStorage, "portalCurrentUserId", user.id);
     if (user.email) originalSetItem.call(localStorage, "portalCurrentUserEmail", user.email);
@@ -166,6 +209,7 @@
       mappingsByLocalKey.set(mapping.localKey, mapping);
       if (mapping.legacyKey) mappingsByLocalKey.set(mapping.legacyKey, mapping);
     });
+    setShellSyncGuard(true);
     notify({ state: "syncing", user });
 
     const { data, error } = await activeClient
@@ -175,6 +219,7 @@
     if (version !== syncVersion) return;
     if (error) {
       console.error("账号数据同步不可用，请先运行 account-data-setup.sql。", error);
+      setShellSyncGuard(false);
       notify({ state: "error", operation: "load", error, user });
       return;
     }
@@ -221,6 +266,7 @@
         .upsert(migrations, { onConflict: "user_id,data_key" });
       if (migrationError) {
         console.error("迁移现有浏览器数据失败", migrationError);
+        setShellSyncGuard(false);
         notify({ state: "error", operation: "migrate", error: migrationError, user });
         return;
       }
@@ -237,9 +283,12 @@
       detail: { user, keys: changedLocalKeys }
     }));
 
-    if (changedLocalKeys.length) {
+    lastReadyUserId = user.id;
+    if (changedLocalKeys.length && allowShellReload && isPortalShell()) {
       window.location.reload();
+      return;
     }
+    setShellSyncGuard(false);
   };
 
   const boot = () => {

@@ -1328,6 +1328,7 @@
     document.querySelectorAll(".dialog-layer").forEach((layer) => {
       layer.addEventListener("mousedown", (event) => {
         if (event.target !== layer) return;
+        if (layer === elements.eventDialog) return;
         if (layer === elements.choiceDialog) resolveChoice(null);
         else closeDialog(layer);
       });
@@ -1343,10 +1344,10 @@
     });
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
+      if (elements.eventDialog.classList.contains("open")) return;
       if (!elements.dateJumpPanel.hidden) return closeDateJump();
       if (elements.choiceDialog.classList.contains("open")) return resolveChoice(null);
       if (elements.deadlineDialog.classList.contains("open")) return closeDialog(elements.deadlineDialog);
-      if (elements.eventDialog.classList.contains("open")) return closeDialog(elements.eventDialog);
       closeDeadlinePopover();
       hideEventHover();
     });

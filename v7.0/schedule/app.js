@@ -766,6 +766,7 @@
       copy.append(title);
       if (row.note) {
         const note = document.createElement("p");
+        note.className = "deadline-note";
         note.textContent = row.note;
         copy.append(note);
       }

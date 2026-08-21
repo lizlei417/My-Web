@@ -19,7 +19,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260822-20">
+  <link rel="stylesheet" href="styles.css?v=20260822-25">
 </head>
 <body>
   <aside class="portal-sidebar" aria-label="左侧导航">
@@ -130,9 +130,14 @@
       <header><div><p class="editor-kicker">SCHEDULE</p><h2 id="eventDialogTitle">添加日程</h2></div><button type="button" data-close-dialog aria-label="关闭">×</button></header>
       <label>标题<input id="eventTitle" maxlength="80" autocomplete="off" required></label>
       <div class="time-fields">
-        <label>开始时间<input id="eventStart" type="time" step="60" required></label>
+        <div class="time-field"><span>开始时间</span><button class="time-trigger" id="eventStartTrigger" type="button" aria-haspopup="dialog" aria-controls="timePickerPanel" aria-expanded="false"><strong id="eventStartLabel">09:00</strong><span aria-hidden="true">◷</span></button><input id="eventStart" type="hidden"></div>
         <span>至</span>
-        <label>结束时间<input id="eventEnd" type="time" step="60" required></label>
+        <div class="time-field"><span>结束时间</span><button class="time-trigger" id="eventEndTrigger" type="button" aria-haspopup="dialog" aria-controls="timePickerPanel" aria-expanded="false"><strong id="eventEndLabel">10:00</strong><span aria-hidden="true">◷</span></button><input id="eventEnd" type="hidden"></div>
+        <section class="time-picker-panel" id="timePickerPanel" aria-label="24 小时时间选择器" hidden>
+          <div class="time-picker-heading"><strong id="timePickerTitle">选择开始时间</strong><span>24 小时制</span></div>
+          <div class="time-picker-wheels"><div class="wheel" id="timeHourWheel" aria-label="小时"></div><b>:</b><div class="wheel" id="timeMinuteWheel" aria-label="分钟"></div></div>
+          <div class="time-picker-actions"><button class="ghost-button" id="timePickerCancel" type="button">取消</button><button class="primary-button" id="timePickerConfirm" type="button">确定</button></div>
+        </section>
       </div>
       <fieldset class="color-field"><legend>颜色</legend><div id="colorPicker" class="color-picker"></div></fieldset>
       <div class="note-label-row"><label for="eventNote">备注</label><button id="emojiToggle" type="button" aria-expanded="false" title="插入 Emoji">😊</button></div>
@@ -177,7 +182,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../supabase-config.js"></script>
   <script src="core.js?v=20260822-17"></script>
-  <script src="app.js?v=20260822-20"></script>
+  <script src="app.js?v=20260822-24"></script>
   <script src="../shared-nav.js?v=20260821-3"></script>
 </body>
 </html>

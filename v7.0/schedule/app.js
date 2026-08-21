@@ -37,6 +37,8 @@
     { value: "biweekly", label: "两周" },
     { value: "monthly", label: "月" },
   ];
+  const TIME_HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => ({ value, label: String(value).padStart(2, "0") }));
+  const TIME_MINUTE_OPTIONS = Array.from({ length: 60 }, (_, value) => ({ value, label: String(value).padStart(2, "0") }));
   const MONTH_NAMES = [
     "1月", "2月", "3月", "4月", "5月", "6月",
     "7月", "8月", "9月", "10月", "11月", "12月",
@@ -67,6 +69,11 @@
     deadlineList: $("#deadlineList"), addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
     eventForm: $("#eventForm"), eventDialogTitle: $("#eventDialogTitle"), eventTitle: $("#eventTitle"),
     eventStart: $("#eventStart"), eventEnd: $("#eventEnd"), colorPicker: $("#colorPicker"),
+    eventStartTrigger: $("#eventStartTrigger"), eventEndTrigger: $("#eventEndTrigger"),
+    eventStartLabel: $("#eventStartLabel"), eventEndLabel: $("#eventEndLabel"),
+    timePickerPanel: $("#timePickerPanel"), timePickerTitle: $("#timePickerTitle"),
+    timeHourWheel: $("#timeHourWheel"), timeMinuteWheel: $("#timeMinuteWheel"),
+    timePickerCancel: $("#timePickerCancel"), timePickerConfirm: $("#timePickerConfirm"),
     eventNote: $("#eventNote"), emojiToggle: $("#emojiToggle"), emojiPopup: $("#emojiPopup"),
     recurrenceToggle: $("#recurrenceToggle"), recurrenceSummary: $("#recurrenceSummary"),
     recurrencePanel: $("#recurrencePanel"), repeatEnabled: $("#repeatEnabled"), wheelPicker: $("#wheelPicker"),
@@ -87,6 +94,7 @@
     selectedDeadlineDate: "", eventContext: null, deadlineContext: null,
     selectedColor: "blue", recurrence: { type: "none", value: 0 }, choiceResolve: null,
     deadlineCloseTimer: null, clockTimer: null, transition: null,
+    timePickerTarget: null, timePickerDraft: "",
   };
 
   function uid(prefix) {
@@ -644,7 +652,10 @@
     button.title = `${event.title} ${event.start_time.slice(0, 5)}–${event.end_time.slice(0, 5)}`;
     const title = document.createElement("span");
     title.textContent = event.title;
-    button.append(title);
+    const time = document.createElement("time");
+    time.className = "schedule-event-time";
+    time.textContent = `${event.start_time.slice(0, 5)}-${event.end_time.slice(0, 5)}`;
+    button.append(title, time);
     button.addEventListener("click", (clickEvent) => {
       clickEvent.stopPropagation();
       openEventEditor({ occurrence: event });
@@ -829,6 +840,60 @@
     }));
   }
 
+  function normalizePickerTime(value) {
+    const minutes = Core.timeToMinutes(value);
+    if (!Number.isFinite(minutes) || minutes < 0 || minutes >= 1440) return "00:00";
+    return Core.minutesToTime(minutes);
+  }
+
+  function setEventTime(target, value) {
+    const normalized = normalizePickerTime(value);
+    const input = target === "end" ? elements.eventEnd : elements.eventStart;
+    const label = target === "end" ? elements.eventEndLabel : elements.eventStartLabel;
+    input.value = normalized;
+    label.textContent = normalized;
+  }
+
+  function updateTimePickerDraft(part, value) {
+    const [hour, minute] = normalizePickerTime(state.timePickerDraft).split(":").map(Number);
+    state.timePickerDraft = Core.minutesToTime((part === "hour" ? Number(value) : hour) * 60 + (part === "minute" ? Number(value) : minute));
+  }
+
+  function renderTimePicker() {
+    const [hour, minute] = normalizePickerTime(state.timePickerDraft).split(":").map(Number);
+    renderWheel(elements.timeHourWheel, TIME_HOUR_OPTIONS, hour, (value) => updateTimePickerDraft("hour", value));
+    renderWheel(elements.timeMinuteWheel, TIME_MINUTE_OPTIONS, minute, (value) => updateTimePickerDraft("minute", value));
+  }
+
+  function openTimePicker(target) {
+    const input = target === "end" ? elements.eventEnd : elements.eventStart;
+    state.timePickerTarget = target;
+    state.timePickerDraft = normalizePickerTime(input.value);
+    elements.timePickerTitle.textContent = target === "end" ? "选择结束时间" : "选择开始时间";
+    elements.timePickerPanel.hidden = false;
+    elements.eventStartTrigger.setAttribute("aria-expanded", String(target === "start"));
+    elements.eventEndTrigger.setAttribute("aria-expanded", String(target === "end"));
+    elements.emojiPopup.hidden = true;
+    renderTimePicker();
+  }
+
+  function closeTimePicker({ focus = false } = {}) {
+    const target = state.timePickerTarget;
+    elements.timePickerPanel.hidden = true;
+    elements.eventStartTrigger.setAttribute("aria-expanded", "false");
+    elements.eventEndTrigger.setAttribute("aria-expanded", "false");
+    state.timePickerTarget = null;
+    state.timePickerDraft = "";
+    if (focus && target) (target === "end" ? elements.eventEndTrigger : elements.eventStartTrigger).focus();
+  }
+
+  function confirmTimePicker() {
+    if (!state.timePickerTarget) return;
+    const target = state.timePickerTarget;
+    setEventTime(target, state.timePickerDraft);
+    closeTimePicker({ focus: true });
+  }
+
   function openEventEditor({ date, startMinutes = 540, occurrence = null }) {
     if (!state.identity) return requestLogin();
     hideEventHover();
@@ -837,13 +902,14 @@
     elements.recurrencePanel.hidden = true;
     elements.recurrenceToggle.setAttribute("aria-expanded", "false");
     elements.emojiPopup.hidden = true;
+    closeTimePicker();
     if (occurrence) {
       const series = state.series.find((item) => item.id === occurrence.series_id);
       state.eventContext = { date: occurrence.occurrence_date, occurrence, series };
       elements.eventDialogTitle.textContent = "编辑日程";
       elements.eventTitle.value = occurrence.title || "";
-      elements.eventStart.value = occurrence.start_time.slice(0, 5);
-      elements.eventEnd.value = occurrence.end_time.slice(0, 5);
+      setEventTime("start", occurrence.start_time.slice(0, 5));
+      setEventTime("end", occurrence.end_time.slice(0, 5));
       elements.eventNote.value = occurrence.note || "";
       setColor(occurrence.color || "blue");
       state.recurrence.type = series?.recurrence_type || "none";
@@ -855,8 +921,8 @@
     } else {
       state.eventContext = { date };
       elements.eventDialogTitle.textContent = "添加日程";
-      elements.eventStart.value = Core.minutesToTime(startMinutes);
-      elements.eventEnd.value = Core.minutesToTime(Math.min(1439, startMinutes + 60));
+      setEventTime("start", Core.minutesToTime(startMinutes));
+      setEventTime("end", Core.minutesToTime(Math.min(1439, startMinutes + 60)));
       setColor(defaultColorKey());
       state.recurrence = { type: "none", value: Core.mondayIndex(Core.parseLocalDate(date)) };
       elements.repeatEnabled.checked = false;
@@ -976,6 +1042,7 @@
   async function saveEvent(event) {
     event.preventDefault();
     if (!state.identity) return requestLogin();
+    if (!elements.timePickerPanel.hidden) confirmTimePicker();
     const payload = eventPayload();
     const error = validateEvent(payload);
     elements.eventError.textContent = error;
@@ -1303,6 +1370,10 @@
     elements.dateJumpNextYear.addEventListener("click", () => moveDateJumpMonth(12));
     elements.dateJumpCancel.addEventListener("click", closeDateJump);
     elements.dateJumpConfirm.addEventListener("click", applyDateJump);
+    elements.eventStartTrigger.addEventListener("click", () => openTimePicker("start"));
+    elements.eventEndTrigger.addEventListener("click", () => openTimePicker("end"));
+    elements.timePickerCancel.addEventListener("click", () => closeTimePicker({ focus: true }));
+    elements.timePickerConfirm.addEventListener("click", confirmTimePicker);
     elements.eventForm.addEventListener("submit", saveEvent);
     elements.deadlineForm.addEventListener("submit", saveDeadline);
     elements.deleteEvent.addEventListener("click", deleteCurrentEvent);
@@ -1324,7 +1395,11 @@
     });
     elements.choiceCancel.addEventListener("click", () => resolveChoice(null));
     document.querySelectorAll("[data-close-dialog]").forEach((button) => {
-      button.addEventListener("click", () => closeDialog(button.closest(".dialog-layer")));
+      button.addEventListener("click", () => {
+        const layer = button.closest(".dialog-layer");
+        if (layer === elements.eventDialog) closeTimePicker();
+        closeDialog(layer);
+      });
     });
     document.querySelectorAll(".dialog-layer").forEach((layer) => {
       layer.addEventListener("mousedown", (event) => {
@@ -1345,7 +1420,10 @@
     });
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
-      if (elements.eventDialog.classList.contains("open")) return;
+      if (elements.eventDialog.classList.contains("open")) {
+        if (!elements.timePickerPanel.hidden) closeTimePicker({ focus: true });
+        return;
+      }
       if (!elements.dateJumpPanel.hidden) return closeDateJump();
       if (elements.choiceDialog.classList.contains("open")) return resolveChoice(null);
       if (elements.deadlineDialog.classList.contains("open")) return closeDialog(elements.deadlineDialog);

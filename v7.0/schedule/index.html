@@ -7,6 +7,7 @@
   <link rel="icon" href="data:,">
   <script>
     (() => {
+      if (window.top !== window.self) document.documentElement.classList.add("portal-embedded");
       try {
         const theme = JSON.parse(localStorage.getItem("theme") || "null");
         if (!theme) return;

@@ -1290,6 +1290,13 @@
 
       const isHomeRoute = (route) => normalizeRoute(route).startsWith("home/");
       const isPublicRoute = (route) => isHomeRoute(route) || normalizeRoute(route).startsWith("schedule/");
+      const routeFromContentUrl = (url) => {
+        const contentRoot = new URL(".", document.baseURI).pathname;
+        const childPath = url.pathname.startsWith(contentRoot)
+          ? url.pathname.slice(contentRoot.length)
+          : "";
+        return normalizeRoute(`${childPath}${url.search}${url.hash}`);
+      };
       const hasRememberedSession = localStorage.getItem("portalGuestSession") === "1"
         || Boolean(localStorage.getItem("portalCurrentUserId"));
 
@@ -1646,8 +1653,7 @@
       frame.addEventListener("load", () => {
         try {
           const childUrl = new URL(frame.contentWindow.location.href);
-          const shellDir = new URL("./", window.location.href).pathname;
-          const route = normalizeRoute(`${childUrl.pathname.slice(shellDir.length)}${childUrl.search}${childUrl.hash}`);
+          const route = routeFromContentUrl(childUrl);
           const current = normalizeRoute(new URLSearchParams(window.location.search).get("page"));
           currentRoute = route;
           if (route !== current) updateAddress(route);

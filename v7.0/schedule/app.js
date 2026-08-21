@@ -691,6 +691,7 @@
     elements.hoverCard.append(strong, date, time);
     if (event.note) {
       const note = document.createElement("p");
+      note.className = "event-hover-note";
       note.textContent = event.note;
       elements.hoverCard.append(note);
     }

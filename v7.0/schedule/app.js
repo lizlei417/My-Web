@@ -833,7 +833,7 @@
     const thumbHeight = Math.max(30, trackHeight * list.clientHeight / list.scrollHeight);
     const maxThumbTop = Math.max(0, trackHeight - thumbHeight);
     const maxScrollTop = Math.max(1, list.scrollHeight - list.clientHeight);
-    const thumbTop = maxThumbTop * list.scrollTop / maxScrollTop;
+    const thumbTop = Math.min(maxThumbTop, Math.max(0, maxThumbTop * list.scrollTop / maxScrollTop));
     thumb.style.height = `${thumbHeight}px`;
     thumb.style.transform = `translateY(${thumbTop}px)`;
   }

@@ -173,7 +173,7 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 .deadline-popover header strong { display: block; color: #4e586a; font-size: 14px; }
 .deadline-popover header span { color: var(--theme-deep); font-size: 9px; letter-spacing: .14em; }
 .deadline-popover header button { border: 0; background: transparent; color: #9ba3b0; font-size: 20px; cursor: pointer; }
-.deadline-list-frame { position: relative; }
+.deadline-list-frame { position: relative; overflow: hidden; border-radius: 11px; }
 .deadline-list { max-height: 230px; overflow-y: auto; display: grid; gap: 6px; scrollbar-width: none; }
 .deadline-list::-webkit-scrollbar { display: none; }
 .deadline-custom-scrollbar { position: absolute; z-index: 4; top: 4px; right: 2px; bottom: 4px; width: 6px; border-radius: 999px; opacity: 0; pointer-events: none; transform: scaleY(.94); transition: opacity .2s ease, transform .2s ease; }

@@ -66,7 +66,9 @@
     dateJumpNextMonth: $("#dateJumpNextMonth"), dateJumpNextYear: $("#dateJumpNextYear"),
     dateJumpCancel: $("#dateJumpCancel"), dateJumpConfirm: $("#dateJumpConfirm"),
     deadlinePopover: $("#deadlinePopover"), deadlineDateTitle: $("#deadlineDateTitle"),
-    deadlineList: $("#deadlineList"), addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
+    deadlineListFrame: $("#deadlineListFrame"), deadlineList: $("#deadlineList"),
+    deadlineScrollbar: $("#deadlineScrollbar"), deadlineScrollbarThumb: $("#deadlineScrollbarThumb"),
+    addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
     eventForm: $("#eventForm"), eventDialogTitle: $("#eventDialogTitle"), eventTitle: $("#eventTitle"),
     eventStart: $("#eventStart"), eventEnd: $("#eventEnd"), colorPicker: $("#colorPicker"),
     eventStartTrigger: $("#eventStartTrigger"), eventEndTrigger: $("#eventEndTrigger"),
@@ -94,7 +96,8 @@
     series: [], overrides: [], deadlines: [], identity: null, loadVersion: 0,
     selectedDeadlineDate: "", eventContext: null, deadlineContext: null,
     selectedColor: "blue", recurrence: { type: "none", value: 0 }, choiceResolve: null,
-    deadlineCloseTimer: null, deadlineScrollbarTimer: null, clockTimer: null, transition: null,
+    deadlineCloseTimer: null, deadlineScrollbarRaf: null, deadlineScrollbarDrag: null,
+    deadlineResizeObserver: null, clockTimer: null, transition: null,
     timePickerTarget: null, timePickerDraft: "", expandedDeadlineIds: new Set(),
   };
 
@@ -751,6 +754,8 @@
 
   function closeDeadlinePopover() {
     state.expandedDeadlineIds.clear();
+    elements.deadlineScrollbar.classList.remove("is-visible");
+    elements.deadlineScrollbar.setAttribute("aria-hidden", "true");
     elements.deadlinePopover.classList.remove("open");
     elements.deadlinePopover.setAttribute("aria-hidden", "true");
   }
@@ -764,6 +769,7 @@
       empty.className = "deadline-empty";
       empty.textContent = "这一天还没有 DDL";
       elements.deadlineList.replaceChildren(empty);
+      requestAnimationFrame(updateDeadlineScrollbar);
       return;
     }
     elements.deadlineList.replaceChildren(...rows.map((row) => {
@@ -792,16 +798,15 @@
         note.setAttribute("aria-hidden", String(!state.expandedDeadlineIds.has(row.id)));
         copy.append(note);
         copy.addEventListener("click", () => {
-          if (copy.dataset.collapsing === "true") return;
           const expanded = state.expandedDeadlineIds.has(row.id);
           if (expanded) {
-            collapseDeadlineNote(row, copy, note);
-            return;
+            state.expandedDeadlineIds.delete(row.id);
+          } else {
+            state.expandedDeadlineIds.add(row.id);
           }
-          state.expandedDeadlineIds.add(row.id);
-          note.setAttribute("aria-hidden", "false");
-          copy.setAttribute("aria-expanded", "true");
-          animateDeadlineScrollbar("in");
+          note.setAttribute("aria-hidden", String(expanded));
+          copy.setAttribute("aria-expanded", String(!expanded));
+          animateDeadlineScrollbar();
         });
       }
       const edit = document.createElement("button");
@@ -813,34 +818,88 @@
       item.append(check, copy, edit);
       return item;
     }));
+    requestAnimationFrame(updateDeadlineScrollbar);
   }
 
-  function animateDeadlineScrollbar(direction = "in") {
-    clearTimeout(state.deadlineScrollbarTimer);
-    elements.deadlineList.classList.remove("is-soft-entering-scrollbar", "is-soft-leaving-scrollbar");
-    void elements.deadlineList.offsetWidth;
-    elements.deadlineList.classList.add(direction === "out" ? "is-soft-leaving-scrollbar" : "is-soft-entering-scrollbar");
-    state.deadlineScrollbarTimer = setTimeout(() => {
-      elements.deadlineList.classList.remove("is-soft-entering-scrollbar", "is-soft-leaving-scrollbar");
-    }, direction === "out" ? 170 : 340);
+  function updateDeadlineScrollbar() {
+    const list = elements.deadlineList;
+    const scrollbar = elements.deadlineScrollbar;
+    const thumb = elements.deadlineScrollbarThumb;
+    const overflowing = list.scrollHeight > list.clientHeight + 1;
+    scrollbar.classList.toggle("is-visible", overflowing);
+    scrollbar.setAttribute("aria-hidden", String(!overflowing));
+    if (!overflowing) {
+      thumb.style.height = "0px";
+      thumb.style.transform = "translateY(0)";
+      return;
+    }
+    const trackHeight = scrollbar.clientHeight;
+    const thumbHeight = Math.max(30, trackHeight * list.clientHeight / list.scrollHeight);
+    const maxThumbTop = Math.max(0, trackHeight - thumbHeight);
+    const maxScrollTop = Math.max(1, list.scrollHeight - list.clientHeight);
+    const thumbTop = maxThumbTop * list.scrollTop / maxScrollTop;
+    thumb.style.height = `${thumbHeight}px`;
+    thumb.style.transform = `translateY(${thumbTop}px)`;
   }
 
-  function collapseDeadlineNote(row, copy, note) {
-    copy.dataset.collapsing = "true";
-    animateDeadlineScrollbar("out");
-    setTimeout(() => {
-      elements.deadlineList.classList.add("is-hiding-scrollbar");
-      state.expandedDeadlineIds.delete(row.id);
-      note.setAttribute("aria-hidden", "true");
-      copy.setAttribute("aria-expanded", "false");
-      setTimeout(() => {
-        elements.deadlineList.classList.remove("is-hiding-scrollbar");
-        delete copy.dataset.collapsing;
-        if (elements.deadlineList.scrollHeight > elements.deadlineList.clientHeight + 1) {
-          animateDeadlineScrollbar("in");
-        }
-      }, 260);
-    }, 160);
+  function animateDeadlineScrollbar() {
+    if (state.deadlineScrollbarRaf) cancelAnimationFrame(state.deadlineScrollbarRaf);
+    const startedAt = performance.now();
+    const tick = (now) => {
+      updateDeadlineScrollbar();
+      if (now - startedAt < 340) {
+        state.deadlineScrollbarRaf = requestAnimationFrame(tick);
+      } else {
+        state.deadlineScrollbarRaf = null;
+        updateDeadlineScrollbar();
+      }
+    };
+    state.deadlineScrollbarRaf = requestAnimationFrame(tick);
+  }
+
+  function beginDeadlineScrollbarDrag(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const trackHeight = elements.deadlineScrollbar.clientHeight;
+    const thumbHeight = elements.deadlineScrollbarThumb.offsetHeight;
+    state.deadlineScrollbarDrag = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startScrollTop: elements.deadlineList.scrollTop,
+      maxThumbTop: Math.max(1, trackHeight - thumbHeight),
+      maxScrollTop: Math.max(0, elements.deadlineList.scrollHeight - elements.deadlineList.clientHeight),
+    };
+    elements.deadlineScrollbarThumb.setPointerCapture(event.pointerId);
+  }
+
+  function moveDeadlineScrollbarDrag(event) {
+    const drag = state.deadlineScrollbarDrag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const delta = (event.clientY - drag.startY) * drag.maxScrollTop / drag.maxThumbTop;
+    elements.deadlineList.scrollTop = drag.startScrollTop + delta;
+  }
+
+  function endDeadlineScrollbarDrag(event) {
+    const drag = state.deadlineScrollbarDrag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    state.deadlineScrollbarDrag = null;
+    if (elements.deadlineScrollbarThumb.hasPointerCapture(event.pointerId)) {
+      elements.deadlineScrollbarThumb.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function jumpDeadlineScrollbar(event) {
+    if (event.target === elements.deadlineScrollbarThumb) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = elements.deadlineScrollbar.getBoundingClientRect();
+    const thumbHeight = elements.deadlineScrollbarThumb.offsetHeight;
+    const maxThumbTop = Math.max(1, elements.deadlineScrollbar.clientHeight - thumbHeight);
+    const thumbTop = Math.min(maxThumbTop, Math.max(0, event.clientY - rect.top - thumbHeight / 2));
+    const maxScrollTop = Math.max(0, elements.deadlineList.scrollHeight - elements.deadlineList.clientHeight);
+    elements.deadlineList.scrollTop = thumbTop / maxThumbTop * maxScrollTop;
+    updateDeadlineScrollbar();
   }
 
   function openDialog(layer) {
@@ -1449,6 +1508,16 @@
     elements.deadlinePopover.addEventListener("pointerenter", () => clearTimeout(state.deadlineCloseTimer));
     elements.deadlinePopover.addEventListener("pointerleave", scheduleDeadlineClose);
     elements.deadlinePopover.querySelector("[data-close-deadlines]").addEventListener("click", closeDeadlinePopover);
+    elements.deadlineList.addEventListener("scroll", updateDeadlineScrollbar, { passive: true });
+    elements.deadlineScrollbar.addEventListener("pointerdown", jumpDeadlineScrollbar);
+    elements.deadlineScrollbarThumb.addEventListener("pointerdown", beginDeadlineScrollbarDrag);
+    elements.deadlineScrollbarThumb.addEventListener("pointermove", moveDeadlineScrollbarDrag);
+    elements.deadlineScrollbarThumb.addEventListener("pointerup", endDeadlineScrollbarDrag);
+    elements.deadlineScrollbarThumb.addEventListener("pointercancel", endDeadlineScrollbarDrag);
+    if ("ResizeObserver" in window) {
+      state.deadlineResizeObserver = new ResizeObserver(updateDeadlineScrollbar);
+      state.deadlineResizeObserver.observe(elements.deadlineList);
+    }
     elements.recurrenceToggle.addEventListener("click", () => {
       const open = elements.recurrencePanel.hidden;
       elements.recurrencePanel.hidden = !open;
@@ -1509,6 +1578,7 @@
     });
     window.addEventListener("resize", () => {
       if (state.transition) cleanupScheduleTransition(state.transition, state.transition.targetView);
+      updateDeadlineScrollbar();
     });
     window.addEventListener("pagehide", () => {
       if (state.transition) cleanupScheduleTransition(state.transition, state.transition.targetView);

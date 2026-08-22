@@ -828,9 +828,14 @@
     const overflowing = list.scrollHeight > list.clientHeight + 1;
     scrollbar.classList.toggle("is-visible", overflowing);
     scrollbar.setAttribute("aria-hidden", String(!overflowing));
-    if (!overflowing) return;
-    const trackHeight = scrollbar.clientHeight;
-    const thumbHeight = Math.max(30, trackHeight * list.clientHeight / list.scrollHeight);
+    const trackHeight = Math.max(0, scrollbar.clientHeight);
+    if (!overflowing) {
+      thumb.style.height = `${trackHeight}px`;
+      thumb.style.transform = "translateY(0)";
+      return;
+    }
+    const minimumThumbHeight = Math.min(30, trackHeight);
+    const thumbHeight = Math.min(trackHeight, Math.max(minimumThumbHeight, trackHeight * list.clientHeight / list.scrollHeight));
     const maxThumbTop = Math.max(0, trackHeight - thumbHeight);
     const maxScrollTop = Math.max(1, list.scrollHeight - list.clientHeight);
     const thumbTop = Math.min(maxThumbTop, Math.max(0, maxThumbTop * list.scrollTop / maxScrollTop));

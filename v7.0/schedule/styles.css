@@ -183,7 +183,8 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 button.deadline-copy { cursor: pointer; }
 .deadline-item strong { display: block; overflow: hidden; color: #596273; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .deadline-item p { margin: 2px 0 0; color: #929aa8; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
-.deadline-item .deadline-note { white-space: pre-wrap; }
+.deadline-item .deadline-note { max-height: 0; margin-top: 0; overflow: hidden; opacity: 0; transform: translateY(-3px); white-space: pre-wrap; transition: max-height .24s ease, margin-top .24s ease, opacity .16s ease, transform .24s ease; }
+.deadline-copy[aria-expanded="true"] .deadline-note { max-height: 320px; margin-top: 2px; opacity: 1; transform: none; }
 .add-deadline { width: 100%; margin-top: 9px; min-height: 32px; border: 0; border-radius: 10px; color: var(--theme-deep); background: rgba(var(--theme-rgb), .09); font-size: 11px; cursor: pointer; }
 
 .dialog-layer { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(244,247,252,.32); opacity: 0; pointer-events: none; backdrop-filter: blur(3px); transition: opacity .16s ease; }

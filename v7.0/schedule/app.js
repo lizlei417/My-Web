@@ -789,13 +789,13 @@
         const note = document.createElement("p");
         note.className = "deadline-note";
         note.textContent = row.note;
-        note.hidden = !state.expandedDeadlineIds.has(row.id);
+        note.setAttribute("aria-hidden", String(!state.expandedDeadlineIds.has(row.id)));
         copy.append(note);
         copy.addEventListener("click", () => {
           const expanded = state.expandedDeadlineIds.has(row.id);
           if (expanded) state.expandedDeadlineIds.delete(row.id);
           else state.expandedDeadlineIds.add(row.id);
-          note.hidden = expanded;
+          note.setAttribute("aria-hidden", String(expanded));
           copy.setAttribute("aria-expanded", String(!expanded));
         });
       }

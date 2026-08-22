@@ -173,7 +173,11 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 .deadline-popover header strong { display: block; color: #4e586a; font-size: 14px; }
 .deadline-popover header span { color: var(--theme-deep); font-size: 9px; letter-spacing: .14em; }
 .deadline-popover header button { border: 0; background: transparent; color: #9ba3b0; font-size: 20px; cursor: pointer; }
+.deadline-list-frame { position: relative; }
 .deadline-list { max-height: 230px; overflow-y: auto; display: grid; gap: 6px; }
+.deadline-scroll-reveal { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: 12px; pointer-events: none; opacity: 0; background: rgba(255,255,255,.96); transform-origin: bottom; }
+.deadline-list-frame.is-revealing-scrollbar .deadline-scroll-reveal { opacity: 1; animation: reveal-deadline-scrollbar .24s ease forwards; }
+@keyframes reveal-deadline-scrollbar { from { transform: scaleY(1); } to { transform: scaleY(0); } }
 .deadline-empty { margin: 18px 0; color: #a0a7b3; font-size: 11px; text-align: center; }
 .deadline-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) 24px; align-items: start; gap: 7px; padding: 8px; border-radius: 11px; background: rgba(246,248,252,.82); }
 .deadline-item.completed { opacity: .58; }
@@ -226,12 +230,15 @@ button.deadline-copy { cursor: pointer; }
 .emoji-popup { position: absolute; z-index: 5; right: 20px; margin-top: -2px; width: 205px; padding: 8px; border: 1px solid rgba(255,255,255,.9); border-radius: 13px; background: rgba(255,255,255,.96); box-shadow: 0 15px 38px rgba(74,86,111,.16); }
 .emoji-popup button { width: 31px; height: 31px; padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
 .emoji-popup button:hover { background: rgba(var(--theme-rgb), .1); }
-.recurrence-summary { width: 100%; min-height: 42px; margin-top: 11px; padding: 0 10px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; border: 0; border-radius: 11px; background: rgba(247,249,252,.86); cursor: pointer; }
+.recurrence-anchor { position: relative; margin-top: 11px; }
+.recurrence-summary { width: 100%; min-height: 42px; padding: 0 10px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; border: 0; border-radius: 11px; background: rgba(247,249,252,.86); cursor: pointer; }
 .recurrence-summary span { font-size: 11px; font-weight: 650; }
 .recurrence-summary strong { color: var(--theme-deep); font-size: 11px; font-weight: 600; text-align: right; }
 .recurrence-summary b { color: #a1a8b3; font-size: 17px; font-weight: 400; transition: transform .18s ease; }
 .recurrence-summary[aria-expanded="true"] b { transform: rotate(90deg); }
-.recurrence-panel { margin-top: 7px; padding: 10px; border-radius: 13px; background: rgba(var(--theme-rgb), .045); }
+.recurrence-panel { position: absolute; z-index: 8; top: calc(100% + 7px); left: 0; right: 0; padding: 10px; border: 1px solid rgba(var(--theme-rgb), .14); border-radius: 13px; background: rgba(252,252,254,.98); box-shadow: 0 18px 42px rgba(72,84,108,.17); transform-origin: top center; animation: recurrence-dropdown .2s cubic-bezier(.2,.72,.25,1) both; }
+.recurrence-panel[hidden] { display: none; }
+@keyframes recurrence-dropdown { from { opacity: 0; transform: translateY(-7px) scaleY(.92); } to { opacity: 1; transform: none; } }
 .repeat-enabled { display: flex; align-items: center; gap: 8px; }
 .repeat-enabled input { width: 16px; margin: 0; accent-color: var(--theme); }
 .wheel-picker { position: relative; height: 126px; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 7px; overflow: hidden; }
@@ -251,8 +258,11 @@ button.deadline-copy { cursor: pointer; }
 .ghost-button { color: #788191; background: rgba(239,242,247,.86); }
 .danger-link { color: #cb7378; background: transparent; }
 .selected-date { margin: -7px 0 14px; color: var(--theme-deep); font-size: 12px; }
+.event-editor, .deadline-editor { overflow: visible; }
 .deadline-editor > label, .deadline-editor > .note-label-row { display: block; margin-top: 11px; }
 .deadline-editor > .note-label-row { display: flex; }
+.deadline-emoji-anchor { position: relative; display: inline-flex; }
+.deadline-emoji-anchor .emoji-popup { top: 100%; left: 100%; right: auto; margin: 0; }
 .choice-card { width: min(330px, calc(100vw - 28px)); padding: 22px; text-align: center; }
 .choice-card h2 { margin: 0; color: #4f596b; font: 500 22px Georgia, "Songti SC", serif; }
 .choice-card p { margin: 8px 0 15px; color: #8c94a2; font-size: 11px; line-height: 1.55; }

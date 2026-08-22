@@ -66,7 +66,7 @@
     dateJumpNextMonth: $("#dateJumpNextMonth"), dateJumpNextYear: $("#dateJumpNextYear"),
     dateJumpCancel: $("#dateJumpCancel"), dateJumpConfirm: $("#dateJumpConfirm"),
     deadlinePopover: $("#deadlinePopover"), deadlineDateTitle: $("#deadlineDateTitle"),
-    deadlineList: $("#deadlineList"), addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
+    deadlineList: $("#deadlineList"), deadlineListFrame: $("#deadlineListFrame"), addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
     eventForm: $("#eventForm"), eventDialogTitle: $("#eventDialogTitle"), eventTitle: $("#eventTitle"),
     eventStart: $("#eventStart"), eventEnd: $("#eventEnd"), colorPicker: $("#colorPicker"),
     eventStartTrigger: $("#eventStartTrigger"), eventEndTrigger: $("#eventEndTrigger"),
@@ -94,7 +94,7 @@
     series: [], overrides: [], deadlines: [], identity: null, loadVersion: 0,
     selectedDeadlineDate: "", eventContext: null, deadlineContext: null,
     selectedColor: "blue", recurrence: { type: "none", value: 0 }, choiceResolve: null,
-    deadlineCloseTimer: null, clockTimer: null, transition: null,
+    deadlineCloseTimer: null, deadlineScrollbarTimer: null, clockTimer: null, transition: null,
     timePickerTarget: null, timePickerDraft: "", expandedDeadlineIds: new Set(),
   };
 
@@ -797,6 +797,7 @@
           else state.expandedDeadlineIds.add(row.id);
           note.setAttribute("aria-hidden", String(expanded));
           copy.setAttribute("aria-expanded", String(!expanded));
+          animateDeadlineScrollbar();
         });
       }
       const edit = document.createElement("button");
@@ -808,6 +809,16 @@
       item.append(check, copy, edit);
       return item;
     }));
+  }
+
+  function animateDeadlineScrollbar() {
+    clearTimeout(state.deadlineScrollbarTimer);
+    elements.deadlineListFrame.classList.remove("is-revealing-scrollbar");
+    void elements.deadlineListFrame.offsetWidth;
+    elements.deadlineListFrame.classList.add("is-revealing-scrollbar");
+    state.deadlineScrollbarTimer = setTimeout(() => {
+      elements.deadlineListFrame.classList.remove("is-revealing-scrollbar");
+    }, 260);
   }
 
   function openDialog(layer) {

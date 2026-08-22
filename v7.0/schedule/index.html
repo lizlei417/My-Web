@@ -19,7 +19,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260822-27">
+  <link rel="stylesheet" href="styles.css?v=20260823-28">
 </head>
 <body>
   <aside class="portal-sidebar" aria-label="左侧导航">
@@ -162,7 +162,9 @@
       <header><div><p class="editor-kicker">DEADLINE</p><h2 id="deadlineDialogTitle">添加 DDL</h2></div><button type="button" data-close-dialog aria-label="关闭">×</button></header>
       <p class="selected-date" id="deadlineSelectedDate"></p>
       <label>DDL 名称<input id="deadlineTitle" maxlength="100" autocomplete="off" required></label>
-      <label>备注<textarea id="deadlineNote" rows="3" maxlength="500"></textarea></label>
+      <div class="note-label-row"><label for="deadlineNote">备注</label><button id="deadlineEmojiToggle" type="button" aria-expanded="false" title="插入 Emoji">😊</button></div>
+      <textarea id="deadlineNote" rows="3" maxlength="500"></textarea>
+      <div class="emoji-popup" id="deadlineEmojiPopup" hidden></div>
       <p class="form-error" id="deadlineError" role="alert"></p>
       <footer><button class="danger-link" id="deleteDeadline" type="button" hidden>删除</button><span></span><button class="ghost-button" type="button" data-close-dialog>取消</button><button class="primary-button" type="submit">保存</button></footer>
     </form>
@@ -182,7 +184,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../supabase-config.js"></script>
   <script src="core.js?v=20260822-17"></script>
-  <script src="app.js?v=20260822-25"></script>
+  <script src="app.js?v=20260823-26"></script>
   <script src="../shared-nav.js?v=20260821-3"></script>
 </body>
 </html>

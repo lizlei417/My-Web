@@ -179,6 +179,8 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 .deadline-item.completed { opacity: .58; }
 .deadline-check, .deadline-edit { width: 22px; height: 22px; padding: 0; border: 1px solid rgba(var(--theme-rgb), .24); border-radius: 50%; background: #fff; color: var(--theme-deep); cursor: pointer; }
 .deadline-edit { border: 0; border-radius: 7px; background: transparent; color: #a0a7b3; }
+.deadline-copy { min-width: 0; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; }
+button.deadline-copy { cursor: pointer; }
 .deadline-item strong { display: block; overflow: hidden; color: #596273; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .deadline-item p { margin: 2px 0 0; color: #929aa8; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .deadline-item .deadline-note { white-space: pre-wrap; }
@@ -248,7 +250,8 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 .ghost-button { color: #788191; background: rgba(239,242,247,.86); }
 .danger-link { color: #cb7378; background: transparent; }
 .selected-date { margin: -7px 0 14px; color: var(--theme-deep); font-size: 12px; }
-.deadline-editor > label { display: block; margin-top: 11px; }
+.deadline-editor > label, .deadline-editor > .note-label-row { display: block; margin-top: 11px; }
+.deadline-editor > .note-label-row { display: flex; }
 .choice-card { width: min(330px, calc(100vw - 28px)); padding: 22px; text-align: center; }
 .choice-card h2 { margin: 0; color: #4f596b; font: 500 22px Georgia, "Songti SC", serif; }
 .choice-card p { margin: 8px 0 15px; color: #8c94a2; font-size: 11px; line-height: 1.55; }

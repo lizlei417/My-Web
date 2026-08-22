@@ -81,6 +81,7 @@
     deleteEvent: $("#deleteEvent"), deadlineDialog: $("#deadlineDialog"), deadlineForm: $("#deadlineForm"),
     deadlineDialogTitle: $("#deadlineDialogTitle"), deadlineSelectedDate: $("#deadlineSelectedDate"),
     deadlineTitle: $("#deadlineTitle"), deadlineNote: $("#deadlineNote"), deadlineError: $("#deadlineError"),
+    deadlineEmojiToggle: $("#deadlineEmojiToggle"), deadlineEmojiPopup: $("#deadlineEmojiPopup"),
     deleteDeadline: $("#deleteDeadline"), choiceDialog: $("#choiceDialog"), choiceTitle: $("#choiceTitle"),
     choiceMessage: $("#choiceMessage"), choiceActions: $("#choiceActions"), choiceCancel: $("#choiceCancel"),
     toast: $("#toast"),
@@ -94,7 +95,7 @@
     selectedDeadlineDate: "", eventContext: null, deadlineContext: null,
     selectedColor: "blue", recurrence: { type: "none", value: 0 }, choiceResolve: null,
     deadlineCloseTimer: null, clockTimer: null, transition: null,
-    timePickerTarget: null, timePickerDraft: "",
+    timePickerTarget: null, timePickerDraft: "", expandedDeadlineIds: new Set(),
   };
 
   function uid(prefix) {
@@ -734,6 +735,7 @@
 
   function openDeadlinePopover(dateValue, anchor) {
     clearTimeout(state.deadlineCloseTimer);
+    if (state.selectedDeadlineDate !== dateValue) state.expandedDeadlineIds.clear();
     state.selectedDeadlineDate = dateValue;
     elements.deadlineDateTitle.textContent = fullDateLabel(dateValue);
     renderDeadlineList();
@@ -748,6 +750,7 @@
   }
 
   function closeDeadlinePopover() {
+    state.expandedDeadlineIds.clear();
     elements.deadlinePopover.classList.remove("open");
     elements.deadlinePopover.setAttribute("aria-hidden", "true");
   }
@@ -772,15 +775,29 @@
       check.textContent = row.completed ? "✓" : "";
       check.setAttribute("aria-label", row.completed ? "取消完成" : "标记完成");
       check.addEventListener("click", () => toggleDeadline(row));
-      const copy = document.createElement("div");
+      const hasNote = Boolean(row.note?.trim());
+      const copy = document.createElement(hasNote ? "button" : "div");
+      copy.className = "deadline-copy";
+      if (hasNote) {
+        copy.type = "button";
+        copy.setAttribute("aria-expanded", String(state.expandedDeadlineIds.has(row.id)));
+      }
       const title = document.createElement("strong");
       title.textContent = row.title;
       copy.append(title);
-      if (row.note) {
+      if (hasNote) {
         const note = document.createElement("p");
         note.className = "deadline-note";
         note.textContent = row.note;
+        note.hidden = !state.expandedDeadlineIds.has(row.id);
         copy.append(note);
+        copy.addEventListener("click", () => {
+          const expanded = state.expandedDeadlineIds.has(row.id);
+          if (expanded) state.expandedDeadlineIds.delete(row.id);
+          else state.expandedDeadlineIds.add(row.id);
+          note.hidden = expanded;
+          copy.setAttribute("aria-expanded", String(!expanded));
+        });
       }
       const edit = document.createElement("button");
       edit.type = "button";
@@ -1232,6 +1249,8 @@
     elements.deadlineSelectedDate.textContent = fullDateLabel(dateValue);
     elements.deadlineTitle.value = row?.title || "";
     elements.deadlineNote.value = row?.note || "";
+    elements.deadlineEmojiPopup.hidden = true;
+    elements.deadlineEmojiToggle.setAttribute("aria-expanded", "false");
     elements.deleteDeadline.hidden = !row;
     closeDeadlinePopover();
     openDialog(elements.deadlineDialog);
@@ -1323,22 +1342,36 @@
     }
   }
 
-  function buildEmojiPopup() {
-    elements.emojiPopup.replaceChildren(...EMOJIS.map((emoji) => {
+  function buildEmojiPopup(popup, toggle, input) {
+    popup.replaceChildren(...EMOJIS.map((emoji) => {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = emoji;
       button.addEventListener("click", () => {
-        const input = elements.eventNote;
         const start = input.selectionStart ?? input.value.length;
         const end = input.selectionEnd ?? start;
         input.setRangeText(emoji, start, end, "end");
         input.focus();
-        elements.emojiPopup.hidden = true;
-        elements.emojiToggle.setAttribute("aria-expanded", "false");
+        popup.hidden = true;
+        toggle.setAttribute("aria-expanded", "false");
       });
       return button;
     }));
+  }
+
+  function toggleEmojiPopup(popup, toggle, otherPopup, otherToggle) {
+    const open = popup.hidden;
+    otherPopup.hidden = true;
+    otherToggle.setAttribute("aria-expanded", "false");
+    popup.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+  }
+
+  function closeEmojiPopups() {
+    elements.emojiPopup.hidden = true;
+    elements.emojiToggle.setAttribute("aria-expanded", "false");
+    elements.deadlineEmojiPopup.hidden = true;
+    elements.deadlineEmojiToggle.setAttribute("aria-expanded", "false");
   }
 
   async function bootstrapIdentity() {
@@ -1391,8 +1424,11 @@
     elements.repeatEnabled.addEventListener("change", renderRecurrenceControls);
     elements.emojiToggle.addEventListener("click", (event) => {
       event.stopPropagation();
-      elements.emojiPopup.hidden = !elements.emojiPopup.hidden;
-      elements.emojiToggle.setAttribute("aria-expanded", String(!elements.emojiPopup.hidden));
+      toggleEmojiPopup(elements.emojiPopup, elements.emojiToggle, elements.deadlineEmojiPopup, elements.deadlineEmojiToggle);
+    });
+    elements.deadlineEmojiToggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleEmojiPopup(elements.deadlineEmojiPopup, elements.deadlineEmojiToggle, elements.emojiPopup, elements.emojiToggle);
     });
     elements.choiceCancel.addEventListener("click", () => resolveChoice(null));
     document.querySelectorAll("[data-close-dialog]").forEach((button) => {
@@ -1412,10 +1448,7 @@
     });
     document.addEventListener("click", (event) => {
       const eventPath = typeof event.composedPath === "function" ? event.composedPath() : [];
-      if (!event.target.closest("#emojiPopup, #emojiToggle")) {
-        elements.emojiPopup.hidden = true;
-        elements.emojiToggle.setAttribute("aria-expanded", "false");
-      }
+      if (!event.target.closest("#emojiPopup, #emojiToggle, #deadlineEmojiPopup, #deadlineEmojiToggle")) closeEmojiPopups();
       if (!event.target.closest("#deadlinePopover, .day-heading, .year-day")) closeDeadlinePopover();
       if (!eventPath.includes(elements.dateJump) && !event.target.closest("#dateJump")) closeDateJump();
     });
@@ -1454,7 +1487,8 @@
   }
 
   buildColorPicker();
-  buildEmojiPopup();
+  buildEmojiPopup(elements.emojiPopup, elements.emojiToggle, elements.eventNote);
+  buildEmojiPopup(elements.deadlineEmojiPopup, elements.deadlineEmojiToggle, elements.deadlineNote);
   bindEvents();
   renderSchedule();
   bootstrapIdentity();

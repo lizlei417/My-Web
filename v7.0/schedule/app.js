@@ -649,6 +649,7 @@
     button.style.width = `calc(${laneWidth}% - ${laneGap}px)`;
     button.dataset.lane = String(laneIndex);
     button.dataset.laneCount = String(laneCount);
+    if (event.end_minutes - event.start_minutes === 60) button.classList.add("schedule-event--one-hour");
     button.title = `${event.title} ${event.start_time.slice(0, 5)}–${event.end_time.slice(0, 5)}`;
     const title = document.createElement("span");
     title.textContent = event.title;

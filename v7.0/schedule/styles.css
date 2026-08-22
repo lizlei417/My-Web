@@ -1,3 +1,5 @@
+@property --deadline-scroll-opacity { syntax: "<number>"; inherits: true; initial-value: .5; }
+
 :root {
   --theme: #7fa9eb;
   --theme-deep: #6f92cf;
@@ -174,10 +176,16 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 .deadline-popover header span { color: var(--theme-deep); font-size: 9px; letter-spacing: .14em; }
 .deadline-popover header button { border: 0; background: transparent; color: #9ba3b0; font-size: 20px; cursor: pointer; }
 .deadline-list-frame { position: relative; }
-.deadline-list { max-height: 230px; overflow-y: auto; display: grid; gap: 6px; }
-.deadline-scroll-reveal { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: 12px; pointer-events: none; opacity: 0; background: rgba(255,255,255,.96); transform-origin: bottom; }
-.deadline-list-frame.is-revealing-scrollbar .deadline-scroll-reveal { opacity: 1; animation: reveal-deadline-scrollbar .24s ease forwards; }
-@keyframes reveal-deadline-scrollbar { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+.deadline-list { --deadline-scroll-opacity: .5; max-height: 230px; overflow-y: auto; display: grid; gap: 6px; scrollbar-width: thin; scrollbar-color: rgba(132,142,159,.5) transparent; }
+.deadline-list::-webkit-scrollbar { width: 8px; }
+.deadline-list::-webkit-scrollbar-track { background: transparent; }
+.deadline-list::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: rgba(132,142,159,var(--deadline-scroll-opacity)); background-clip: padding-box; }
+.deadline-list.is-soft-entering-scrollbar { animation: soften-deadline-scrollbar .32s ease-out both; }
+.deadline-list.is-soft-leaving-scrollbar { animation: dismiss-deadline-scrollbar .16s ease-in both; }
+.deadline-list.is-hiding-scrollbar { scrollbar-color: transparent transparent; }
+.deadline-list.is-hiding-scrollbar::-webkit-scrollbar-thumb { background: transparent; }
+@keyframes soften-deadline-scrollbar { from { --deadline-scroll-opacity: 0; } to { --deadline-scroll-opacity: .5; } }
+@keyframes dismiss-deadline-scrollbar { from { --deadline-scroll-opacity: .5; } to { --deadline-scroll-opacity: 0; } }
 .deadline-empty { margin: 18px 0; color: #a0a7b3; font-size: 11px; text-align: center; }
 .deadline-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) 24px; align-items: start; gap: 7px; padding: 8px; border-radius: 11px; background: rgba(246,248,252,.82); }
 .deadline-item.completed { opacity: .58; }

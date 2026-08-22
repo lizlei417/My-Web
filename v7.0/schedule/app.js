@@ -66,7 +66,7 @@
     dateJumpNextMonth: $("#dateJumpNextMonth"), dateJumpNextYear: $("#dateJumpNextYear"),
     dateJumpCancel: $("#dateJumpCancel"), dateJumpConfirm: $("#dateJumpConfirm"),
     deadlinePopover: $("#deadlinePopover"), deadlineDateTitle: $("#deadlineDateTitle"),
-    deadlineList: $("#deadlineList"), deadlineListFrame: $("#deadlineListFrame"), addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
+    deadlineList: $("#deadlineList"), addDeadline: $("#addDeadline"), eventDialog: $("#eventDialog"),
     eventForm: $("#eventForm"), eventDialogTitle: $("#eventDialogTitle"), eventTitle: $("#eventTitle"),
     eventStart: $("#eventStart"), eventEnd: $("#eventEnd"), colorPicker: $("#colorPicker"),
     eventStartTrigger: $("#eventStartTrigger"), eventEndTrigger: $("#eventEndTrigger"),
@@ -792,12 +792,16 @@
         note.setAttribute("aria-hidden", String(!state.expandedDeadlineIds.has(row.id)));
         copy.append(note);
         copy.addEventListener("click", () => {
+          if (copy.dataset.collapsing === "true") return;
           const expanded = state.expandedDeadlineIds.has(row.id);
-          if (expanded) state.expandedDeadlineIds.delete(row.id);
-          else state.expandedDeadlineIds.add(row.id);
-          note.setAttribute("aria-hidden", String(expanded));
-          copy.setAttribute("aria-expanded", String(!expanded));
-          animateDeadlineScrollbar();
+          if (expanded) {
+            collapseDeadlineNote(row, copy, note);
+            return;
+          }
+          state.expandedDeadlineIds.add(row.id);
+          note.setAttribute("aria-hidden", "false");
+          copy.setAttribute("aria-expanded", "true");
+          animateDeadlineScrollbar("in");
         });
       }
       const edit = document.createElement("button");
@@ -811,14 +815,32 @@
     }));
   }
 
-  function animateDeadlineScrollbar() {
+  function animateDeadlineScrollbar(direction = "in") {
     clearTimeout(state.deadlineScrollbarTimer);
-    elements.deadlineListFrame.classList.remove("is-revealing-scrollbar");
-    void elements.deadlineListFrame.offsetWidth;
-    elements.deadlineListFrame.classList.add("is-revealing-scrollbar");
+    elements.deadlineList.classList.remove("is-soft-entering-scrollbar", "is-soft-leaving-scrollbar");
+    void elements.deadlineList.offsetWidth;
+    elements.deadlineList.classList.add(direction === "out" ? "is-soft-leaving-scrollbar" : "is-soft-entering-scrollbar");
     state.deadlineScrollbarTimer = setTimeout(() => {
-      elements.deadlineListFrame.classList.remove("is-revealing-scrollbar");
-    }, 260);
+      elements.deadlineList.classList.remove("is-soft-entering-scrollbar", "is-soft-leaving-scrollbar");
+    }, direction === "out" ? 170 : 340);
+  }
+
+  function collapseDeadlineNote(row, copy, note) {
+    copy.dataset.collapsing = "true";
+    animateDeadlineScrollbar("out");
+    setTimeout(() => {
+      elements.deadlineList.classList.add("is-hiding-scrollbar");
+      state.expandedDeadlineIds.delete(row.id);
+      note.setAttribute("aria-hidden", "true");
+      copy.setAttribute("aria-expanded", "false");
+      setTimeout(() => {
+        elements.deadlineList.classList.remove("is-hiding-scrollbar");
+        delete copy.dataset.collapsing;
+        if (elements.deadlineList.scrollHeight > elements.deadlineList.clientHeight + 1) {
+          animateDeadlineScrollbar("in");
+        }
+      }, 260);
+    }, 160);
   }
 
   function openDialog(layer) {

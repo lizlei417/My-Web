@@ -8,6 +8,9 @@ assert.deepEqual(Core.weekDates(Core.startOfWeek("2026-12-31")), [
 ]);
 assert.equal(Core.timeToMinutes("14:15"), 855);
 assert.equal(Core.timeToMinutes("24:00"), 1440);
+assert.equal(Core.WEEK_VIEW_START_MINUTES, 360, "周视图应从 06:00 开始");
+assert.equal(Core.WEEK_VIEW_END_MINUTES, 1440, "周视图应完整显示到 24:00");
+assert.equal(Core.WEEK_VIEW_DURATION_MINUTES, 1080, "06:00 至 24:00 应占满 18 小时可视区域");
 assert.equal(Core.nextMatchingDate("2026-02-01", "monthly", 31), "2026-03-31");
 assert.equal(Core.nextMatchingDate("2028-02-01", "monthly", 29), "2028-02-29");
 assert.equal(Core.nextMatchingDate("2026-08-18", "weekly", 0), "2026-08-24");

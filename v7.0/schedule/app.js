@@ -37,8 +37,14 @@
     { value: "biweekly", label: "两周" },
     { value: "monthly", label: "月" },
   ];
-  const TIME_HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => ({ value, label: String(value).padStart(2, "0") }));
+  const TIME_HOUR_OPTIONS = Array.from({ length: Core.WEEK_VIEW_DURATION_MINUTES / 60 }, (_, index) => {
+    const value = Core.WEEK_VIEW_START_MINUTES / 60 + index;
+    return { value, label: String(value).padStart(2, "0") };
+  });
   const TIME_MINUTE_OPTIONS = Array.from({ length: 60 }, (_, value) => ({ value, label: String(value).padStart(2, "0") }));
+  const WEEK_VIEW_START_MINUTES = Core.WEEK_VIEW_START_MINUTES;
+  const WEEK_VIEW_END_MINUTES = Core.WEEK_VIEW_END_MINUTES;
+  const WEEK_VIEW_DURATION_MINUTES = Core.WEEK_VIEW_DURATION_MINUTES;
   const MONTH_NAMES = [
     "1月", "2月", "3月", "4月", "5月", "6月",
     "7月", "8月", "9月", "10月", "11月", "12月",
@@ -600,10 +606,10 @@
 
   function renderTimeAxis() {
     const fragment = document.createDocumentFragment();
-    for (let hour = 0; hour <= 24; hour += 2) {
+    for (let hour = WEEK_VIEW_START_MINUTES / 60; hour <= WEEK_VIEW_END_MINUTES / 60; hour += 2) {
       const label = document.createElement("span");
       label.className = "time-label";
-      label.style.top = `${(hour / 24) * 100}%`;
+      label.style.top = `${((hour * 60 - WEEK_VIEW_START_MINUTES) / WEEK_VIEW_DURATION_MINUTES) * 100}%`;
       label.textContent = `${String(hour).padStart(2, "0")}:00`;
       fragment.append(label);
     }
@@ -622,15 +628,22 @@
       column.addEventListener("click", (event) => {
         if (event.target.closest(".schedule-event")) return;
         const rect = column.getBoundingClientRect();
-        const raw = Math.max(0, Math.min(1439, ((event.clientY - rect.top) / rect.height) * 1440));
-        const start = Math.min(1425, Math.round(raw / 15) * 15);
+        const relativeMinutes = Math.max(0, Math.min(WEEK_VIEW_DURATION_MINUTES - 1,
+          ((event.clientY - rect.top) / rect.height) * WEEK_VIEW_DURATION_MINUTES));
+        const start = Math.min(WEEK_VIEW_END_MINUTES - 15,
+          WEEK_VIEW_START_MINUTES + Math.round(relativeMinutes / 15) * 15);
         openEventEditor({ date: dateValue, startMinutes: start });
       });
       const layer = document.createElement("div");
       layer.className = "event-layer";
       const dayEvents = Core.layoutOverlap(occurrences.filter((item) => item.occurrence_date === dateValue));
-      dayEvents.forEach((event) => layer.append(createEventBlock(event)));
-      if (dateValue === today) layer.append(createCurrentTimeLine());
+      dayEvents
+        .filter((event) => event.end_minutes > WEEK_VIEW_START_MINUTES && event.start_minutes < WEEK_VIEW_END_MINUTES)
+        .forEach((event) => layer.append(createEventBlock(event)));
+      if (dateValue === today) {
+        const currentTimeLine = createCurrentTimeLine();
+        if (currentTimeLine) layer.append(currentTimeLine);
+      }
       column.append(layer);
       fragment.append(column);
     });
@@ -646,9 +659,11 @@
     const laneIndex = Math.max(0, Math.min(laneCount - 1, Number(event.lane) || 0));
     const laneWidth = 100 / laneCount;
     const laneGap = 4;
+    const visibleStart = Math.max(WEEK_VIEW_START_MINUTES, event.start_minutes);
+    const visibleEnd = Math.min(WEEK_VIEW_END_MINUTES, event.end_minutes);
     button.style.setProperty("--event-color", COLOR_MAP[event.color] || COLOR_MAP.blue);
-    button.style.top = `${(event.start_minutes / 1440) * 100}%`;
-    button.style.height = `${Math.max(0, ((event.end_minutes - event.start_minutes) / 1440) * 100)}%`;
+    button.style.top = `${((visibleStart - WEEK_VIEW_START_MINUTES) / WEEK_VIEW_DURATION_MINUTES) * 100}%`;
+    button.style.height = `${Math.max(0, ((visibleEnd - visibleStart) / WEEK_VIEW_DURATION_MINUTES) * 100)}%`;
     button.style.left = `calc(${laneIndex * laneWidth}% + ${laneGap / 2}px)`;
     button.style.width = `calc(${laneWidth}% - ${laneGap}px)`;
     button.dataset.lane = String(laneIndex);
@@ -676,11 +691,13 @@
 
   function createCurrentTimeLine() {
     const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    if (currentMinutes < WEEK_VIEW_START_MINUTES || currentMinutes >= WEEK_VIEW_END_MINUTES) return null;
     const line = document.createElement("div");
     line.className = "current-time";
-    line.style.top = `${((now.getHours() * 60 + now.getMinutes()) / 1440) * 100}%`;
+    line.style.top = `${((currentMinutes - WEEK_VIEW_START_MINUTES) / WEEK_VIEW_DURATION_MINUTES) * 100}%`;
     const label = document.createElement("time");
-    label.textContent = Core.minutesToTime(now.getHours() * 60 + now.getMinutes());
+    label.textContent = Core.minutesToTime(currentMinutes);
     line.append(label);
     return line;
   }
@@ -1146,6 +1163,10 @@
     const start = Core.timeToMinutes(payload.start_time);
     const end = Core.timeToMinutes(payload.end_time);
     if (!Number.isFinite(start) || !Number.isFinite(end)) return "请输入合法的开始和结束时间";
+    if (start < WEEK_VIEW_START_MINUTES || end < WEEK_VIEW_START_MINUTES
+      || start >= WEEK_VIEW_END_MINUTES || end > WEEK_VIEW_END_MINUTES) {
+      return "日程时间请选择 06:00–24:00";
+    }
     if (end <= start) return "结束时间必须晚于开始时间；跨午夜请拆成两个日程";
     return "";
   }

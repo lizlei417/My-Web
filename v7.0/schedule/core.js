@@ -5,6 +5,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, () => {
   const DAY_MS = 86400000;
   const WEEKDAY_LABELS = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"];
+  const WEEK_VIEW_START_MINUTES = 6 * 60;
+  const WEEK_VIEW_END_MINUTES = 24 * 60;
+  const WEEK_VIEW_DURATION_MINUTES = WEEK_VIEW_END_MINUTES - WEEK_VIEW_START_MINUTES;
 
   function parseLocalDate(value) {
     if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12);
@@ -227,6 +230,9 @@
 
   return {
     WEEKDAY_LABELS,
+    WEEK_VIEW_DURATION_MINUTES,
+    WEEK_VIEW_END_MINUTES,
+    WEEK_VIEW_START_MINUTES,
     addDays,
     daysInMonth,
     diffDays,

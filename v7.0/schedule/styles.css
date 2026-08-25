@@ -144,7 +144,7 @@ h1 { margin: 0; color: #465166; font-family: Georgia, "Songti SC", serif; font-s
 .time-label:first-child { transform: translateY(2px); }
 .time-label:last-child { transform: translateY(-100%); }
 .days-grid { min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.day-column { position: relative; min-width: 0; border-right: 1px solid var(--line); cursor: crosshair; background-image: linear-gradient(to bottom, rgba(102,119,148,.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(102,119,148,.045) 1px, transparent 1px); background-size: 100% calc(100% / 12), 100% calc(100% / 24); }
+.day-column { position: relative; min-width: 0; border-right: 1px solid var(--line); cursor: crosshair; background-image: linear-gradient(to bottom, rgba(102,119,148,.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(102,119,148,.045) 1px, transparent 1px); background-size: 100% calc(100% / 9), 100% calc(100% / 18); }
 .day-column:last-child { border-right: 0; }
 .day-column.today { background-color: rgba(var(--theme-rgb), .045); }
 .event-layer { position: absolute; inset: 0 3px; pointer-events: none; }

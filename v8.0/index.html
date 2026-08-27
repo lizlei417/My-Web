@@ -1359,6 +1359,7 @@
         const method = replace ? "replaceState" : "pushState";
         history[method]({ route }, "", url);
         setRouteStyle(route);
+        window.dispatchEvent(new CustomEvent("portal:routechange", { detail: { route } }));
       };
 
       if (initialRoute !== requestedRoute) updateAddress(initialRoute, true);

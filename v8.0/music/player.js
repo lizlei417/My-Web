@@ -10,6 +10,9 @@
   const DB_STORE = "tracks";
   const CLOUD_BUCKET = "portal-music";
   const CLOUD_TABLE = "user_music";
+  const DRAG_HOLD_MS = 420;
+  const DRAG_MOVE_TOLERANCE = 9;
+  const DRAG_EDGE_GAP = 12;
   const musicRoot = new URL("./", document.currentScript.src);
   const portalRoot = new URL("../", musicRoot);
   const coverUrl = new URL("image.png", musicRoot).href;
@@ -126,6 +129,14 @@
   let dbPromise = null;
   let cloudClient = null;
   let playMode = "sequence";
+  let dragHoldTimer = null;
+  let dragPointerId = null;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragOriginLeft = 0;
+  let dragOriginTop = 0;
+  let dragActive = false;
+  let suppressPlayerClick = false;
 
   const escapeHtml = (value) => String(value || "")
     .replaceAll("&", "&amp;")
@@ -416,6 +427,100 @@
     playerCard.setAttribute("aria-expanded", String(open));
   };
 
+  const playerBounds = (left, top) => {
+    const rect = playerWrap.getBoundingClientRect();
+    const sidebar = document.querySelector(".shell-sidebar, .sidebar, .portal-sidebar");
+    const sidebarRect = sidebar?.getBoundingClientRect();
+    const sidebarRight = sidebarRect && sidebarRect.width > 0
+      ? sidebarRect.right + DRAG_EDGE_GAP
+      : DRAG_EDGE_GAP;
+    const maxLeft = Math.max(sidebarRight, window.innerWidth - rect.width - DRAG_EDGE_GAP);
+    const maxTop = Math.max(DRAG_EDGE_GAP, window.innerHeight - rect.height - DRAG_EDGE_GAP);
+    return {
+      left: Math.min(maxLeft, Math.max(sidebarRight, left)),
+      top: Math.min(maxTop, Math.max(DRAG_EDGE_GAP, top))
+    };
+  };
+
+  const placePlayer = (left, top) => {
+    const next = playerBounds(left, top);
+    playerWrap.classList.add("is-positioned");
+    playerWrap.style.left = `${next.left}px`;
+    playerWrap.style.top = `${next.top}px`;
+  };
+
+  const resetPlayerPosition = () => {
+    clearTimeout(dragHoldTimer);
+    dragHoldTimer = null;
+    dragPointerId = null;
+    dragActive = false;
+    suppressPlayerClick = false;
+    playerCard.classList.remove("is-dragging");
+    playerWrap.classList.remove("is-positioned");
+    playerWrap.style.removeProperty("left");
+    playerWrap.style.removeProperty("top");
+  };
+
+  const finishPlayerDrag = (event) => {
+    if (event.pointerId !== dragPointerId) return;
+    clearTimeout(dragHoldTimer);
+    dragHoldTimer = null;
+    if (dragActive) {
+      event.preventDefault();
+      playerCard.classList.remove("is-dragging");
+      try { playerCard.releasePointerCapture(event.pointerId); } catch {}
+      setTimeout(() => { suppressPlayerClick = false; }, 0);
+    }
+    dragActive = false;
+    dragPointerId = null;
+  };
+
+  playerCard.addEventListener("pointerdown", (event) => {
+    if (!event.isPrimary || event.button !== 0 || event.target.closest("button, input, .music-panel")) return;
+    clearTimeout(dragHoldTimer);
+    dragPointerId = event.pointerId;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    dragHoldTimer = setTimeout(() => {
+      if (dragPointerId !== event.pointerId) return;
+      const rect = playerWrap.getBoundingClientRect();
+      dragOriginLeft = rect.left;
+      dragOriginTop = rect.top;
+      suppressPlayerClick = true;
+      dragActive = true;
+      setPanelOpen(false);
+      placePlayer(rect.left, rect.top);
+      playerCard.classList.add("is-dragging");
+      try { playerCard.setPointerCapture(event.pointerId); } catch {}
+    }, DRAG_HOLD_MS);
+  });
+
+  window.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== dragPointerId) return;
+    const deltaX = event.clientX - dragStartX;
+    const deltaY = event.clientY - dragStartY;
+    if (!dragActive) {
+      if (Math.hypot(deltaX, deltaY) > DRAG_MOVE_TOLERANCE) {
+        clearTimeout(dragHoldTimer);
+        dragHoldTimer = null;
+        dragPointerId = null;
+      }
+      return;
+    }
+    event.preventDefault();
+    placePlayer(dragOriginLeft + deltaX, dragOriginTop + deltaY);
+  }, { passive: false });
+
+  window.addEventListener("pointerup", finishPlayerDrag);
+  window.addEventListener("pointercancel", finishPlayerDrag);
+  window.addEventListener("resize", () => {
+    if (!playerWrap.classList.contains("is-positioned")) return;
+    const rect = playerWrap.getBoundingClientRect();
+    placePlayer(rect.left, rect.top);
+  });
+  window.addEventListener("portal:routechange", resetPlayerPosition);
+  window.addEventListener("popstate", resetPlayerPosition);
+
   const uploadCloudTrack = async (client, file, trackId, title) => {
     if (!client || !currentUser) return false;
     const safeName = file.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, "_");
@@ -473,6 +578,11 @@
   };
 
   playerCard.addEventListener("click", (event) => {
+    if (suppressPlayerClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (event.target.closest(".player-btn, .music-panel")) return;
     event.stopPropagation();
     setPanelOpen(!panel.classList.contains("open"));

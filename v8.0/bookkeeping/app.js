@@ -401,6 +401,10 @@
       if (event.target.dataset.timePart === "minute") controller.pendingMinute = clamp(Number(event.target.value || 0), 0, 59);
     });
     panel.addEventListener("click", (event) => {
+      // Rendering a newly selected day replaces the clicked button. Without
+      // stopping this event here, the document-level outside-click handler
+      // sees the now-detached target and closes the picker prematurely.
+      event.stopPropagation();
       const action = event.target.closest("[data-date-action]")?.dataset.dateAction;
       const dateButton = event.target.closest("[data-date]");
       if (dateButton) {

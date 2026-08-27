@@ -12,6 +12,13 @@
   flex: 0 0 auto;
 }
 
+.music-player-wrap.is-positioned {
+  position: fixed;
+  right: auto;
+  bottom: auto;
+  z-index: 120;
+}
+
 .portal-music-shell .player,
 .portal-music-shell .global-player {
   box-sizing: border-box;
@@ -19,8 +26,19 @@
   grid-template-columns: 48px minmax(128px, 1fr) 32px 52px 32px;
   width: 420px;
   min-width: 420px;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   user-select: none;
+}
+
+.portal-music-shell .portal-music-card.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 22px 54px rgba(var(--theme-rgb, var(--nav-theme-rgb, 127,169,235)), .24), inset 0 0 22px rgba(255,255,255,.7);
+}
+
+.portal-music-shell .player-btn {
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .portal-music-copy {

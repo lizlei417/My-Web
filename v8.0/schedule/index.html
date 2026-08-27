@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>日程纪要 · My Web</title>
+  <link rel="icon" href="data:,">
+  <script>
+    (() => {
+      if (window.top !== window.self) document.documentElement.classList.add("portal-embedded");
+      try {
+        const theme = JSON.parse(localStorage.getItem("theme") || "null");
+        if (!theme) return;
+        const root = document.documentElement;
+        if (theme.theme) root.style.setProperty("--theme", theme.theme);
+        if (theme.deep) root.style.setProperty("--theme-deep", theme.deep);
+        if (theme.soft) root.style.setProperty("--theme-soft", theme.soft);
+        if (theme.rgb) root.style.setProperty("--theme-rgb", theme.rgb);
+      } catch {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=20260825-01">
+</head>
+<body>
+  <aside class="portal-sidebar" aria-label="左侧导航">
+    <a class="portal-nav-item" data-nav-key="home" href="../home/index.html" title="主页">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>主页</span>
+    </a>
+    <a class="portal-nav-item" data-nav-key="habitat" href="../Habitat/index.html" title="栖息地">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 12 9-8 9 8"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg><span>栖息地</span>
+    </a>
+    <a class="portal-nav-item active" data-nav-key="schedule" href="index.html" title="日程纪要">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 3v3"/><path d="M17 3v3"/><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 14h3"/><path d="M8 17h6"/></svg><span>日程纪要</span>
+    </a>
+    <a class="portal-nav-item" data-nav-key="bookkeeping" href="../bookkeeping/index.html" title="流光账本">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h4M7 16h5"/><path d="m15 15 1.5 1.5L19 13"/></svg><span>流光账本</span>
+    </a>
+    <a class="portal-nav-item" data-nav-key="journal" href="../plan-journal/index.html" title="计划日记">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-5"/></svg><span>计划日记</span>
+    </a>
+    <a class="portal-nav-item" data-nav-key="bookmarks" href="../collect/index.html" title="网站收藏">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v18l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg><span>网站收藏</span>
+    </a>
+    <a class="portal-nav-item" data-nav-key="notes" href="../Note/index.html" title="文件整理">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg><span>文件整理</span>
+    </a>
+    <button class="portal-settings" type="button" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.54V21h-4v-.06a1.7 1.7 0 0 0-1-1.54 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.54-1H3v-4h.06A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.54V3h4v.06A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.54 1H21v4h-.06A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>设置</span>
+    </button>
+  </aside>
+
+  <main class="schedule-page">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">WEEKLY NOTE</p>
+        <div class="title-row">
+          <h1>日程纪要</h1>
+        </div>
+        <p class="week-range" id="weekRange"></p>
+      </div>
+      <div class="header-controls">
+        <div class="date-jump" id="dateJump">
+          <button class="date-jump-trigger" id="dateJumpTrigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dateJumpPanel">
+            <span class="date-jump-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 8h16M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/></svg></span>
+            <span id="dateJumpLabel"></span>
+            <b aria-hidden="true">⌄</b>
+          </button>
+          <section class="date-jump-panel" id="dateJumpPanel" role="dialog" aria-label="选择跳转日期" aria-hidden="true" hidden>
+            <div class="calendar-toolbar">
+              <button id="dateJumpPrevYear" type="button" aria-label="上一年">«</button>
+              <button id="dateJumpPrevMonth" type="button" aria-label="上一月">‹</button>
+              <strong id="dateJumpMonthTitle"></strong>
+              <button id="dateJumpNextMonth" type="button" aria-label="下一月">›</button>
+              <button id="dateJumpNextYear" type="button" aria-label="下一年">»</button>
+            </div>
+            <div class="calendar-weekdays" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+            <div class="calendar-days" id="dateJumpGrid" role="grid" aria-label="日期"></div>
+            <div class="calendar-selection"><span class="calendar-selection-icon" aria-hidden="true">▣</span><strong id="dateJumpPendingLabel"></strong></div>
+            <footer>
+              <button class="ghost-button" id="dateJumpCancel" type="button">取消</button>
+              <button class="primary-button" id="dateJumpConfirm" type="button">确认</button>
+            </footer>
+          </section>
+        </div>
+        <nav class="week-actions" id="weekActions" aria-label="周切换">
+          <button id="previousWeek" type="button" aria-label="上一周">‹ <span>上一周</span></button>
+          <button id="todayWeek" class="today-button" type="button">今天</button>
+          <button id="nextWeek" type="button" aria-label="下一周"><span>下一周</span> ›</button>
+        </nav>
+        <nav class="year-actions" id="yearActions" aria-label="年份切换" hidden>
+          <button id="previousYear" type="button" aria-label="上一年">‹ <span>上一年</span></button>
+          <strong id="yearControlLabel" aria-live="polite"></strong>
+          <button id="currentYear" class="today-button" type="button" aria-label="回到今年">今年</button>
+          <button id="nextYear" type="button" aria-label="下一年"><span>下一年</span> ›</button>
+        </nav>
+      </div>
+    </header>
+
+    <section class="schedule-board" id="weekView" aria-label="周日程表">
+      <div class="calendar-scroll" id="calendarScroll">
+        <div class="week-header" id="weekHeader"></div>
+        <div class="timeline">
+          <div class="time-axis" id="timeAxis" aria-hidden="true"></div>
+          <div class="days-grid" id="daysGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="year-board" id="yearView" aria-label="年度月历" hidden>
+      <div class="year-grid" id="yearGrid"></div>
+    </section>
+  </main>
+
+  <div class="schedule-view-switcher" id="viewSwitcher" role="group" aria-label="日程视图">
+    <span class="view-switch-slider" aria-hidden="true"></span>
+    <button type="button" data-schedule-view="week" aria-pressed="true" aria-label="切换到周视图">周</button>
+    <button type="button" data-schedule-view="year" aria-pressed="false" aria-label="切换到年度月历">年</button>
+  </div>
+
+  <div class="hover-card" id="hoverCard" role="tooltip" hidden></div>
+
+  <section class="deadline-popover" id="deadlinePopover" aria-hidden="true">
+    <header>
+      <div><strong id="deadlineDateTitle"></strong><span>DDL</span></div>
+      <button type="button" data-close-deadlines aria-label="关闭">×</button>
+    </header>
+    <div class="deadline-list-frame" id="deadlineListFrame"><div class="deadline-list" id="deadlineList"></div><div class="deadline-custom-scrollbar" id="deadlineScrollbar" aria-hidden="true"><span id="deadlineScrollbarThumb"></span></div></div>
+    <button class="add-deadline" id="addDeadline" type="button">＋ 添加 DDL</button>
+  </section>
+
+  <section class="dialog-layer" id="eventDialog" aria-hidden="true">
+    <form class="editor-card event-editor" id="eventForm">
+      <header><div><p class="editor-kicker">SCHEDULE</p><h2 id="eventDialogTitle">添加日程</h2></div><button type="button" data-close-dialog aria-label="关闭">×</button></header>
+      <label>标题<input id="eventTitle" maxlength="80" autocomplete="off" required></label>
+      <div class="time-fields">
+        <div class="time-field"><span>开始时间</span><button class="time-trigger" id="eventStartTrigger" type="button" aria-haspopup="dialog" aria-controls="timePickerPanel" aria-expanded="false"><strong id="eventStartLabel">09:00</strong><span aria-hidden="true">◷</span></button><input id="eventStart" type="hidden"></div>
+        <span>至</span>
+        <div class="time-field"><span>结束时间</span><button class="time-trigger" id="eventEndTrigger" type="button" aria-haspopup="dialog" aria-controls="timePickerPanel" aria-expanded="false"><strong id="eventEndLabel">10:00</strong><span aria-hidden="true">◷</span></button><input id="eventEnd" type="hidden"></div>
+        <section class="time-picker-panel" id="timePickerPanel" aria-label="24 小时时间选择器" hidden>
+          <div class="time-picker-heading"><strong id="timePickerTitle">选择开始时间</strong><span>24 小时制</span></div>
+          <div class="time-picker-wheels"><div class="wheel" id="timeHourWheel" aria-label="小时"></div><b>:</b><div class="wheel" id="timeMinuteWheel" aria-label="分钟"></div></div>
+          <div class="time-picker-actions"><button class="ghost-button" id="timePickerCancel" type="button">取消</button><button class="primary-button" id="timePickerConfirm" type="button">确定</button></div>
+        </section>
+      </div>
+      <fieldset class="color-field"><legend>颜色</legend><div id="colorPicker" class="color-picker"></div></fieldset>
+      <div class="note-label-row"><label for="eventNote">备注</label><button id="emojiToggle" type="button" aria-expanded="false" title="插入 Emoji">😊</button></div>
+      <textarea id="eventNote" rows="3" maxlength="500"></textarea>
+      <div class="emoji-popup" id="emojiPopup" hidden></div>
+      <div class="recurrence-anchor">
+        <button class="recurrence-summary" id="recurrenceToggle" type="button" aria-expanded="false" aria-controls="recurrencePanel"><span>重复</span><strong id="recurrenceSummary">不重复</strong><b>›</b></button>
+        <section class="recurrence-panel" id="recurrencePanel" hidden>
+          <label class="repeat-enabled"><input id="repeatEnabled" type="checkbox"><span>开启重复</span></label>
+          <div class="wheel-picker" id="wheelPicker" hidden>
+            <span class="wheel-prefix">每</span>
+            <div class="wheel" id="periodWheel" aria-label="重复周期"></div>
+            <div class="wheel" id="valueWheel" aria-label="重复日期"></div>
+          </div>
+        </section>
+      </div>
+      <p class="form-error" id="eventError" role="alert"></p>
+      <footer><button class="danger-link" id="deleteEvent" type="button" hidden>删除</button><span></span><button class="ghost-button" type="button" data-close-dialog>取消</button><button class="primary-button" type="submit">保存</button></footer>
+    </form>
+  </section>
+
+  <section class="dialog-layer" id="deadlineDialog" aria-hidden="true">
+    <form class="editor-card deadline-editor" id="deadlineForm">
+      <header><div><p class="editor-kicker">DEADLINE</p><h2 id="deadlineDialogTitle">添加 DDL</h2></div><button type="button" data-close-dialog aria-label="关闭">×</button></header>
+      <p class="selected-date" id="deadlineSelectedDate"></p>
+      <label>DDL 名称<input id="deadlineTitle" maxlength="100" autocomplete="off" required></label>
+      <div class="note-label-row"><label for="deadlineNote">备注</label><span class="deadline-emoji-anchor"><button id="deadlineEmojiToggle" type="button" aria-expanded="false" title="插入 Emoji">😊</button><span class="emoji-popup" id="deadlineEmojiPopup" hidden></span></span></div>
+      <textarea id="deadlineNote" rows="3" maxlength="500"></textarea>
+      <p class="form-error" id="deadlineError" role="alert"></p>
+      <footer><button class="danger-link" id="deleteDeadline" type="button" hidden>删除</button><span></span><button class="ghost-button" type="button" data-close-dialog>取消</button><button class="primary-button" type="submit">保存</button></footer>
+    </form>
+  </section>
+
+  <section class="dialog-layer choice-layer" id="choiceDialog" aria-hidden="true">
+    <div class="choice-card" role="dialog" aria-modal="true" aria-labelledby="choiceTitle">
+      <h2 id="choiceTitle">这是重复日程</h2>
+      <p id="choiceMessage"></p>
+      <div id="choiceActions"></div>
+      <button class="ghost-button" id="choiceCancel" type="button">取消</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase-config.js"></script>
+  <script src="core.js?v=20260825-01"></script>
+  <script src="app.js?v=20260825-02"></script>
+  <script src="../shared-nav.js?v=20260827-1"></script>
+</body>
+</html>

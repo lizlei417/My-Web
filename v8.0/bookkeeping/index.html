@@ -20,7 +20,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260827-2">
 </head>
 <body>
   <div class="app-shell">
@@ -180,6 +180,7 @@
         </header>
         <div class="ledger-table-wrap">
           <table class="ledger-table">
+            <colgroup><col class="ledger-col-event"><col class="ledger-col-category"><col class="ledger-col-amount"><col class="ledger-col-actions"></colgroup>
             <thead><tr><th>事件</th><th>分类</th><th id="convertedCurrencyHeader">金额 HKD</th><th aria-label="操作"></th></tr></thead>
             <tbody id="ledgerBody"></tbody>
           </table>
@@ -292,11 +293,12 @@
     </section>
   </div>
 
+  <div class="ledger-note-tooltip" id="ledgerNoteTooltip" role="tooltip" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../supabase-config.js"></script>
   <script src="../account-data.js?v=20260827-1"></script>
   <script src="../shared-nav.js?v=20260827-2"></script>
-  <script src="app.js?v=20260827-1"></script>
+  <script src="app.js?v=20260827-2"></script>
 </body>
 </html>

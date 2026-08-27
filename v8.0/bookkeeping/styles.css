@@ -252,7 +252,11 @@ h1 { margin: 0; color: #465166; font-size: clamp(30px, 3vw, 42px); letter-spacin
 .global-currency-picker .custom-select-trigger { min-height: 32px; border: 0; color: var(--theme-deep); background: rgba(var(--theme-rgb),.09); font-weight: 750; }
 .global-currency-picker .custom-select-menu { right: 0; left: auto; }
 .ledger-table-wrap { position: relative; min-height: 240px; overflow-x: auto; }
-.ledger-table { width: 100%; min-width: 640px; border-collapse: collapse; }
+.ledger-table { width: 100%; min-width: 640px; border-collapse: collapse; table-layout: fixed; }
+.ledger-col-event { width: 54%; }
+.ledger-col-category { width: 14%; }
+.ledger-col-amount { width: 22%; }
+.ledger-col-actions { width: 10%; }
 .ledger-table th { padding: 12px 14px; color: #a0a8b4; background: rgba(248,250,253,.58); font-size: 9px; font-weight: 700; text-align: left; letter-spacing: .04em; }
 .ledger-table th:first-child, .ledger-table td:first-child { padding-left: 22px; }
 .ledger-table th:last-child, .ledger-table td:last-child { padding-right: 18px; }
@@ -264,12 +268,15 @@ h1 { margin: 0; color: #465166; font-size: clamp(30px, 3vw, 42px); letter-spacin
 .ledger-period-year th { padding: 24px 22px 9px; color: #505d74; background: rgba(247,249,253,.7); font-family: Georgia, "Songti SC", serif; font-size: 23px; font-weight: 600; letter-spacing: .02em; }
 .ledger-period-month th { padding: 14px 22px 7px; color: #64718a; background: rgba(250,251,254,.72); font-family: Georgia, "Songti SC", serif; font-size: 17px; font-weight: 600; }
 .ledger-period-date th { padding: 10px 22px 7px; color: #8590a4; background: rgba(250,251,254,.68); font-size: 10px; font-weight: 700; letter-spacing: .03em; }
-.transaction-event { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; min-width: 190px; }
+.transaction-event { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; width: 100%; min-width: 0; }
 .category-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; font-size: 16px; }
 .transaction-copy { min-width: 0; }
 .transaction-event strong { display: block; max-width: 230px; overflow: hidden; color: #59657b; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.transaction-event small { display: block; min-height: 11px; max-width: 230px; margin-top: 3px; overflow: hidden; color: #a2a9b5; font-size: 9px; line-height: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-note-wrap { display: block; width: 100%; min-width: 0; }
+.transaction-event small.transaction-note { display: block; width: 100%; min-height: 11px; margin-top: 3px; overflow: hidden; color: #a2a9b5; font-size: 9px; line-height: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-note.is-truncated { cursor: help; }
 .transaction-event small.is-empty { visibility: hidden; }
+.ledger-note-tooltip { position: fixed; z-index: 1800; width: max-content; max-width: min(460px, calc(100vw - 24px)); padding: 10px 12px; border: 1px solid rgba(255,255,255,.88); border-radius: 12px; color: #fff; background: rgba(72,84,108,.95); box-shadow: 0 14px 34px rgba(57,70,96,.22); font-size: 10px; line-height: 1.55; white-space: normal; overflow-wrap: anywhere; pointer-events: none; }
 .category-tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 9px; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .amount-hkd { font-weight: 750; white-space: nowrap; }
 .amount-hkd.expense { color: #c8787f; }.amount-hkd.income { color: #4d9e7f; }

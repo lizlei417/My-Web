@@ -36,7 +36,7 @@
     "greetingText", "displayCurrencySelect", "rangePresets", "customRange", "rangeStart", "rangeEnd", "applyRangeButton", "rangeCaption",
     "expenseTotal", "incomeTotal", "expenseComparison", "incomeHint",
     "chartTypeControl", "categoryDonut", "donutLabel", "donutTotal", "categoryLegend", "insightText", "trendChart", "trendTitle", "trendPeriodControl", "trendZoomNote", "baseCurrencyNote",
-    "transactionCount", "searchInput", "typeFilter", "categoryFilter", "convertedCurrencyHeader", "ledgerBody", "ledgerEmpty",
+    "transactionCount", "searchInput", "typeFilter", "categoryFilter", "convertedCurrencyHeader", "ledgerBody", "ledgerEmpty", "ledgerNoteTooltip",
     "addTransactionButton", "emptyAddButton", "railRecordButton", "manageCategoriesButton", "railCategoryButton", "resetDemoButton",
     "transactionDrawer", "drawerTitle", "transactionForm", "transactionId", "transactionTypeSwitch", "transactionType",
     "transactionTitle", "transactionAmount", "transactionCurrency", "ratePreview", "transactionDate",
@@ -683,6 +683,7 @@
   }
 
   function renderLedger() {
+    hideLedgerNoteTooltip();
     const records = filteredLedgerRecords();
     els.transactionCount.textContent = `${records.length} 笔`;
     els.ledgerEmpty.hidden = records.length > 0;
@@ -722,13 +723,52 @@
       const hasOriginalCurrency = record.currency !== "HKD";
       const originalLabel = `${sign}${formatOriginal(record)}`;
       rows.push(`<tr class="ledger-entry-row" data-record-id="${escapeHtml(record.id)}">
-        <td><div class="transaction-event"><span class="category-avatar" style="color:${escapeHtml(category.color)};background:${escapeHtml(category.color)}1c">${escapeHtml(category.icon)}</span><span class="transaction-copy"><strong>${escapeHtml(record.title)}</strong><small class="transaction-note${record.note ? "" : " is-empty"}"${record.note ? "" : " aria-hidden=\"true\""}>${escapeHtml(record.note || "")}</small></span></div></td>
+        <td><div class="transaction-event"><span class="category-avatar" style="color:${escapeHtml(category.color)};background:${escapeHtml(category.color)}1c">${escapeHtml(category.icon)}</span><span class="transaction-copy"><strong>${escapeHtml(record.title)}</strong><span class="transaction-note-wrap"><small class="transaction-note${record.note ? "" : " is-empty"}"${record.note ? "" : " aria-hidden=\"true\""}>${escapeHtml(record.note || "")}</small></span></span></div></td>
         <td><span class="category-tag" style="color:${escapeHtml(category.color)};background:${escapeHtml(category.color)}16">${escapeHtml(category.icon)} ${escapeHtml(category.name)}</span></td>
         <td><span class="ledger-amount${hasOriginalCurrency ? " has-original" : ""}"${hasOriginalCurrency ? ` tabindex="0" aria-label="折合港币 ${escapeHtml(sign + formatHkd(amountHkd))}，实际金额 ${escapeHtml(originalLabel)}"` : ""}><span class="amount-hkd ${record.type}">${sign}${formatHkd(amountHkd)}</span>${hasOriginalCurrency ? `<span class="original-currency-tooltip" role="tooltip"><small>实际金额</small><strong>${escapeHtml(originalLabel)}</strong></span>` : ""}</span></td>
         <td><div class="row-actions"><button class="row-action edit" type="button" data-edit-record aria-label="编辑 ${escapeHtml(record.title)}">✎</button><button class="row-action delete" type="button" data-delete-record aria-label="删除 ${escapeHtml(record.title)}">×</button></div></td>
       </tr>`);
     });
     els.ledgerBody.innerHTML = rows.join("");
+    requestAnimationFrame(refreshLedgerNoteOverflow);
+  }
+
+  function hideLedgerNoteTooltip() {
+    els.ledgerNoteTooltip.hidden = true;
+    els.ledgerNoteTooltip.textContent = "";
+  }
+
+  function refreshLedgerNoteOverflow() {
+    els.ledgerBody.querySelectorAll(".transaction-note:not(.is-empty)").forEach((note) => {
+      const truncated = note.scrollWidth > note.clientWidth + 1;
+      note.classList.toggle("is-truncated", truncated);
+      if (truncated) {
+        note.tabIndex = 0;
+        note.setAttribute("aria-describedby", "ledgerNoteTooltip");
+      } else {
+        note.removeAttribute("tabindex");
+        note.removeAttribute("aria-describedby");
+      }
+    });
+  }
+
+  function showLedgerNoteTooltip(note) {
+    if (!note?.classList.contains("is-truncated")) return;
+    els.ledgerNoteTooltip.textContent = note.textContent;
+    els.ledgerNoteTooltip.hidden = false;
+    els.ledgerNoteTooltip.style.visibility = "hidden";
+    const noteRect = note.getBoundingClientRect();
+    const tooltipRect = els.ledgerNoteTooltip.getBoundingClientRect();
+    const margin = 12;
+    const gap = 8;
+    const left = clamp(noteRect.left, margin, window.innerWidth - tooltipRect.width - margin);
+    const below = noteRect.bottom + gap;
+    const top = below + tooltipRect.height <= window.innerHeight - margin
+      ? below
+      : Math.max(margin, noteRect.top - tooltipRect.height - gap);
+    els.ledgerNoteTooltip.style.left = `${left}px`;
+    els.ledgerNoteTooltip.style.top = `${top}px`;
+    els.ledgerNoteTooltip.style.visibility = "visible";
   }
 
   function renderCategoryPicker(type, preferredId = "") {
@@ -946,6 +986,24 @@
       if (!record) return;
       if (event.target.closest("[data-delete-record]")) requestDeleteTransaction(record);
       else if (event.target.closest("[data-edit-record]")) openTransactionDrawer(record);
+    });
+    els.ledgerBody.addEventListener("mouseover", (event) => {
+      showLedgerNoteTooltip(event.target.closest(".transaction-note.is-truncated"));
+    });
+    els.ledgerBody.addEventListener("mouseout", (event) => {
+      const note = event.target.closest(".transaction-note.is-truncated");
+      if (note && !note.contains(event.relatedTarget)) hideLedgerNoteTooltip();
+    });
+    els.ledgerBody.addEventListener("focusin", (event) => {
+      showLedgerNoteTooltip(event.target.closest(".transaction-note.is-truncated"));
+    });
+    els.ledgerBody.addEventListener("focusout", (event) => {
+      if (event.target.closest(".transaction-note.is-truncated")) hideLedgerNoteTooltip();
+    });
+    els.ledgerBody.closest(".ledger-table-wrap").addEventListener("scroll", hideLedgerNoteTooltip, { passive: true });
+    window.addEventListener("resize", () => {
+      hideLedgerNoteTooltip();
+      requestAnimationFrame(refreshLedgerNoteOverflow);
     });
 
     els.transactionTypeSwitch.addEventListener("click", (event) => {

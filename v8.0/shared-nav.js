@@ -655,6 +655,7 @@
   };
 
   const ensureGlobalAccountDock = () => {
+    if (isEmbedded) return;
     if (document.querySelector(".account-dock, .global-account-dock")) return;
     const isGuest = (() => {
       try {
@@ -718,7 +719,7 @@
   }
   if (!isEmbedded && !document.querySelector('script[data-portal-music]')) {
     const script = document.createElement("script");
-    script.src = `${pageRoot}/music/player.js`;
+    script.src = `${pageRoot}/music/player.js?v=20260827-2`;
     script.dataset.portalMusic = "true";
     document.body.appendChild(script);
   }

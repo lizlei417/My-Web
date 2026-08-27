@@ -520,6 +520,10 @@
   });
   window.addEventListener("portal:routechange", resetPlayerPosition);
   window.addEventListener("popstate", resetPlayerPosition);
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("[data-route]")) resetPlayerPosition();
+  }, true);
+  document.getElementById("portalFrame")?.addEventListener("load", resetPlayerPosition);
 
   const uploadCloudTrack = async (client, file, trackId, title) => {
     if (!client || !currentUser) return false;

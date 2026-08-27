@@ -1034,6 +1034,25 @@
         height: 42px;
       }
     }
+
+    @media (max-height: 900px) {
+      .shell-sidebar {
+        gap: 10px;
+        padding-top: 24px;
+        padding-bottom: 20px;
+      }
+
+      .shell-nav-item,
+      .shell-add,
+      .shell-settings {
+        min-height: 48px;
+      }
+
+      .shell-nav-item span,
+      .shell-settings span {
+        font-size: 11px;
+      }
+    }
   </style>
 </head>
 <body class="route-home route-with-theme">
@@ -1048,6 +1067,9 @@
     </button>
     <button class="shell-nav-item" data-route-key="schedule" data-route="schedule/index.html" type="button" title="日程纪要">
       <svg viewBox="0 0 24 24"><path d="M7 3v3"/><path d="M17 3v3"/><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 14h3"/><path d="M8 17h6"/></svg><span>日程纪要</span>
+    </button>
+    <button class="shell-nav-item" data-route-key="bookkeeping" data-route="bookkeeping/index.html" type="button" title="流光账本">
+      <svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h4M7 16h5"/><path d="m15 15 1.5 1.5L19 13"/></svg><span>流光账本</span>
     </button>
     <button class="shell-nav-item" data-route-key="journal" data-route="plan-journal/index.html" type="button" title="计划日记">
       <svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-5"/></svg><span>计划日记</span>
@@ -1142,13 +1164,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="account-data.js?v=20260821-1"></script>
+  <script src="account-data.js?v=20260827-1"></script>
   <script src="music/player.js"></script>
   <script>
     (() => {
       const frame = document.getElementById("portalFrame");
       const params = new URLSearchParams(window.location.search);
-      const allowedRoots = ["home/", "Habitat/", "schedule/", "plan-journal/", "collect/", "Note/"];
+      const allowedRoots = ["home/", "Habitat/", "schedule/", "bookkeeping/", "plan-journal/", "collect/", "Note/"];
       const navItems = [...document.querySelectorAll(".shell-nav-item[data-route]")];
       const accountDock = document.querySelector(".shell-account");
       const accountToggle = document.querySelector(".shell-account-toggle");
@@ -1200,7 +1222,7 @@
       const ARCHIVE_KEY = "homeStickyNoteArchive:v1";
       const NAV_ORDER_KEY = "portalNavOrder";
       const NAV_HIDDEN_KEY = "portalHiddenComponents";
-      const COMPONENT_RESTORE_ORDER = ["habitat", "schedule", "journal", "bookmarks", "notes"];
+      const COMPONENT_RESTORE_ORDER = ["habitat", "schedule", "bookkeeping", "journal", "bookmarks", "notes"];
       const componentItems = navItems.filter((item) => item.dataset.routeKey !== "home");
 
       const currentArchiveKey = () => shellUser ? `user:${shellUser.id}:${ARCHIVE_KEY}` : "";
@@ -1305,11 +1327,14 @@
         document.body.classList.toggle("route-home", clean.startsWith("home/"));
         document.body.classList.toggle("route-collect", clean.startsWith("collect/"));
         document.body.classList.toggle("route-schedule", clean.startsWith("schedule/"));
-        document.body.classList.toggle("route-with-theme", clean.startsWith("home/") || clean.startsWith("schedule/") || clean.startsWith("collect/") || clean.startsWith("Note/"));
+        document.body.classList.toggle("route-bookkeeping", clean.startsWith("bookkeeping/"));
+        document.body.classList.toggle("route-with-theme", clean.startsWith("home/") || clean.startsWith("schedule/") || clean.startsWith("bookkeeping/") || clean.startsWith("collect/") || clean.startsWith("Note/"));
         const activeKey = clean.startsWith("Habitat/")
           ? "habitat"
           : clean.startsWith("schedule/")
             ? "schedule"
+          : clean.startsWith("bookkeeping/")
+            ? "bookkeeping"
           : clean.startsWith("plan-journal/")
             ? "journal"
           : clean.startsWith("collect/")

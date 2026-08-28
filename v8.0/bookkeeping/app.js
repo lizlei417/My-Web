@@ -13,10 +13,13 @@
     GBP: { name: "英镑", symbol: "£", rate: 10.683307, digits: 2 }
   };
   const CATEGORY_COLORS = ["#e49b76", "#78a9d8", "#8d9ee0", "#b18ec9", "#e78aa6", "#65ad9a", "#d98b8b", "#dfaa6d", "#6faac4", "#9b8ec9"];
-  const CATEGORY_EMOJIS = ["🍜", "🍚", "☕", "🍎", "🛒", "🧴", "🧻", "👕", "🚇", "🚌", "🚕", "⛽", "🏠", "💡", "📱", "🎮", "🎬", "🎵", "📚", "✏️", "💊", "🏃", "✈️", "🐾", "🎁", "💼", "💻", "📈", "💰", "✨", "↩️", "🌱"];
+  const CATEGORY_EMOJIS = ["🍜", "🍚", "🧋", "☕", "🍎", "🛒", "🧴", "🧻", "👕", "🚇", "🚌", "🚕", "⛽", "🏠", "💡", "📱", "🎮", "🎬", "🎵", "📚", "✏️", "💊", "🏃", "✈️", "🐾", "🎁", "💼", "💻", "📈", "💰", "✨", "↩️", "🌱"];
+
+  const DEFAULT_DRINK_CATEGORY = { id: "exp-drinks", type: "expense", name: "饮料", icon: "🧋", color: "#dfaa6d", locked: false };
 
   const DEFAULT_CATEGORIES = [
     { id: "exp-food", type: "expense", name: "饮食", icon: "🍜", color: "#e49b76", locked: false },
+    DEFAULT_DRINK_CATEGORY,
     { id: "exp-daily", type: "expense", name: "日用品", icon: "🧴", color: "#78a9d8", locked: false },
     { id: "exp-transport", type: "expense", name: "交通", icon: "🚇", color: "#8d9ee0", locked: false },
     { id: "exp-home", type: "expense", name: "居住", icon: "🏠", color: "#b18ec9", locked: false },
@@ -148,6 +151,14 @@
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
       if (saved && Array.isArray(saved.categories) && Array.isArray(saved.transactions)) {
+        let stateChanged = false;
+        if (!saved.categories.some((category) => category.id === DEFAULT_DRINK_CATEGORY.id)) {
+          const foodIndex = saved.categories.findIndex((category) => category.id === "exp-food");
+          const otherIndex = saved.categories.findIndex((category) => category.id === "exp-other");
+          const insertIndex = foodIndex >= 0 ? foodIndex + 1 : (otherIndex >= 0 ? otherIndex : saved.categories.length);
+          saved.categories.splice(insertIndex, 0, { ...DEFAULT_DRINK_CATEGORY });
+          stateChanged = true;
+        }
         if (saved.rateBasis !== RATE_BASIS) {
           saved.transactions.forEach((record) => {
             record.rate = rateFor(record.currency);
@@ -156,8 +167,9 @@
           saved.rateReferenceDate = RATE_REFERENCE_DATE;
           saved.rateBasis = RATE_BASIS;
           saved.displayCurrency = "HKD";
-          localStorage.setItem(storageKey, JSON.stringify(saved));
+          stateChanged = true;
         }
+        if (stateChanged) localStorage.setItem(storageKey, JSON.stringify(saved));
         return saved;
       }
     } catch {}

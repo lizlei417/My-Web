@@ -14,6 +14,7 @@
   };
   const CATEGORY_COLORS = ["#e49b76", "#78a9d8", "#8d9ee0", "#b18ec9", "#e78aa6", "#65ad9a", "#d98b8b", "#dfaa6d", "#6faac4", "#9b8ec9"];
   const CATEGORY_EMOJIS = ["🍜", "🍚", "🧋", "☕", "🍎", "🛒", "🧴", "🧻", "👕", "🚇", "🚌", "🚕", "⛽", "🏠", "💡", "📱", "🎮", "🎬", "🎵", "📚", "✏️", "💊", "🏃", "✈️", "🐾", "🎁", "💼", "💻", "📈", "💰", "✨", "↩️", "🌱"];
+  const LedgerCore = window.BookkeepingCore;
 
   const DEFAULT_DRINK_CATEGORY = { id: "exp-drinks", type: "expense", name: "饮料", icon: "🧋", color: "#dfaa6d", locked: false };
 
@@ -184,6 +185,7 @@
   let trendPeriod = "day";
   let trendUnitCount = 7;
   let managerType = "expense";
+  let selectedCategoryIds = new Set();
   let selectedCategoryId = "";
   let selectedCategoryEmoji = "✨";
   let toastTimer = 0;
@@ -217,6 +219,7 @@
     menu.className = "custom-select-menu";
     menu.id = `custom-select-menu-${select.id || uid("select")}`;
     menu.setAttribute("role", "listbox");
+    if (select.multiple) menu.setAttribute("aria-multiselectable", "true");
     menu.hidden = true;
     trigger.setAttribute("aria-controls", menu.id);
     wrapper.append(trigger, menu);
@@ -244,9 +247,13 @@
         });
       },
       refresh() {
-        const selected = select.selectedOptions[0] || select.options[0];
-        trigger.querySelector("span").textContent = selected?.textContent || "请选择";
-        trigger.setAttribute("aria-label", `${select.getAttribute("aria-label") || "选择"}：${selected?.textContent || "未选择"}`);
+        const selectedOptions = [...select.selectedOptions].filter((option) => option.value !== "all");
+        const selected = selectedOptions[0] || select.options[0];
+        const selectedLabel = select.multiple && selectedOptions.length > 0
+          ? (selectedOptions.length <= 2 ? selectedOptions.map((option) => option.textContent).join("、") : `${selectedOptions[0].textContent} 等 ${selectedOptions.length} 类`)
+          : (selected?.textContent || "请选择");
+        trigger.querySelector("span").textContent = selectedLabel;
+        trigger.setAttribute("aria-label", `${select.getAttribute("aria-label") || "选择"}：${selectedLabel}`);
         const chunks = [];
         [...select.children].forEach((child) => {
           if (child.tagName === "OPTGROUP") {
@@ -272,7 +279,11 @@
     menu.addEventListener("click", (event) => {
       const option = event.target.closest("[data-value]");
       if (!option) return;
-      select.value = option.dataset.value;
+      if (select.multiple) {
+        const currentValues = [...select.selectedOptions].map((item) => item.value).filter((value) => value !== "all");
+        const nextValues = new Set(LedgerCore.toggleCategorySelection(currentValues, option.dataset.value));
+        [...select.options].forEach((item) => { item.selected = item.value === "all" ? nextValues.size === 0 : nextValues.has(item.value); });
+      } else select.value = option.dataset.value;
       controller.refresh();
       controller.close();
       select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -488,19 +499,16 @@
   }
 
   function totalsFor(records) {
-    return records.reduce((totals, record) => {
-      totals[record.type] += Number(record.amountHkd || (record.amount * rateFor(record.currency)) || 0);
-      return totals;
-    }, { expense: 0, income: 0 });
+    return LedgerCore.totalsFor(records, (record) => Number(record.amountHkd || (record.amount * rateFor(record.currency)) || 0));
   }
 
   function renderAll() {
     renderCurrencyLabels();
     renderRangeCaption();
+    renderCategoryFilter();
     renderSummary();
     renderCategoryChart();
     renderTrend();
-    renderCategoryFilter();
     renderLedger();
   }
 
@@ -522,7 +530,7 @@
   }
 
   function renderSummary() {
-    const records = recordsInRange();
+    const records = recordsInRange().filter(recordMatchesSummaryFilters);
     const totals = totalsFor(records);
     els.expenseTotal.textContent = formatDisplay(totals.expense);
     els.incomeTotal.textContent = formatDisplay(totals.income);
@@ -533,10 +541,16 @@
     const duration = Math.round((end - start) / 86400000) + 1;
     const previousEnd = addDays(start, -1);
     const previousStart = addDays(previousEnd, -(duration - 1));
+    const filtersIncludeExpenses = els.typeFilter.value !== "income" && (
+      selectedCategoryIds.size === 0 || [...selectedCategoryIds].some((id) => categoryById(id).type === "expense")
+    );
     const previousExpense = state.transactions
-      .filter((record) => record.type === "expense" && dateOnly(record.date) >= localDateKey(previousStart) && dateOnly(record.date) <= localDateKey(previousEnd))
+      .filter((record) => recordMatchesSummaryFilters(record) && record.type === "expense" && dateOnly(record.date) >= localDateKey(previousStart) && dateOnly(record.date) <= localDateKey(previousEnd))
       .reduce((sum, record) => sum + Number(record.amountHkd || (record.amount * rateFor(record.currency)) || 0), 0);
-    if (previousExpense > 0) {
+    if (!filtersIncludeExpenses) {
+      els.expenseComparison.textContent = "当前筛选不含支出";
+      els.expenseComparison.className = "";
+    } else if (previousExpense > 0) {
       const difference = ((totals.expense - previousExpense) / previousExpense) * 100;
       els.expenseComparison.textContent = `较上一等长周期 ${difference >= 0 ? "增加" : "减少"} ${Math.abs(difference).toFixed(1)}%`;
       els.expenseComparison.className = difference <= 0 ? "positive" : "negative";
@@ -666,9 +680,11 @@
   }
 
   function renderCategoryFilter() {
-    const current = els.categoryFilter.value || "all";
     const selectedType = els.typeFilter.value;
-    const optionHtml = (category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.icon)} ${escapeHtml(category.name)}</option>`;
+    const availableCategories = state.categories.filter((category) => selectedType === "all" || category.type === selectedType);
+    const availableIds = new Set(availableCategories.map((category) => category.id));
+    selectedCategoryIds = new Set([...selectedCategoryIds].filter((id) => availableIds.has(id)));
+    const optionHtml = (category) => `<option value="${escapeHtml(category.id)}"${selectedCategoryIds.has(category.id) ? " selected" : ""}>${escapeHtml(category.icon)} ${escapeHtml(category.name)}</option>`;
     let options = "";
     if (selectedType === "all") {
       const expenses = state.categories.filter((category) => category.type === "expense").map(optionHtml).join("");
@@ -677,18 +693,18 @@
     } else {
       options = state.categories.filter((category) => category.type === selectedType).map(optionHtml).join("");
     }
-    els.categoryFilter.innerHTML = `<option value="all">全部分类</option>${options}`;
-    const currentCategory = state.categories.find((category) => category.id === current);
-    const canKeepCurrent = currentCategory && (selectedType === "all" || currentCategory.type === selectedType);
-    els.categoryFilter.value = canKeepCurrent ? current : "all";
+    els.categoryFilter.innerHTML = `<option value="all"${selectedCategoryIds.size === 0 ? " selected" : ""}>全部分类</option>${options}`;
     refreshCustomSelect(els.categoryFilter);
+  }
+
+  function recordMatchesSummaryFilters(record) {
+    return LedgerCore.recordMatchesFilters(record, { type: els.typeFilter.value, categoryIds: selectedCategoryIds });
   }
 
   function filteredLedgerRecords() {
     const query = els.searchInput.value.trim().toLocaleLowerCase("zh-CN");
     return recordsInRange().filter((record) => {
-      if (els.typeFilter.value !== "all" && record.type !== els.typeFilter.value) return false;
-      if (els.categoryFilter.value !== "all" && record.categoryId !== els.categoryFilter.value) return false;
+      if (!recordMatchesSummaryFilters(record)) return false;
       if (!query) return true;
       return `${record.title} ${record.note || ""} ${categoryById(record.categoryId).name}`.toLocaleLowerCase("zh-CN").includes(query);
     }).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -980,9 +996,14 @@
     els.searchInput.addEventListener("input", renderLedger);
     els.typeFilter.addEventListener("change", () => {
       renderCategoryFilter();
+      renderSummary();
       renderLedger();
     });
-    els.categoryFilter.addEventListener("change", renderLedger);
+    els.categoryFilter.addEventListener("change", () => {
+      selectedCategoryIds = new Set([...els.categoryFilter.selectedOptions].map((option) => option.value).filter((value) => value !== "all"));
+      renderSummary();
+      renderLedger();
+    });
     els.displayCurrencySelect.addEventListener("change", () => {
       displayCurrency = CURRENCIES[els.displayCurrencySelect.value] ? els.displayCurrencySelect.value : "HKD";
       state.displayCurrency = displayCurrency;
@@ -1156,6 +1177,7 @@
         persist();
         els.searchInput.value = "";
         setSelectValue(els.typeFilter, "all");
+        selectedCategoryIds.clear();
         rangeMode = "month";
         activeRange = rangeForMode(rangeMode);
         trendPeriod = "day";

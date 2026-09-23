@@ -20,7 +20,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260827-2">
+  <link rel="stylesheet" href="styles.css?v=20260924-1">
 </head>
 <body>
   <div class="app-shell">
@@ -175,7 +175,7 @@
               <option value="expense">只看支出</option>
               <option value="income">只看收入</option>
             </select>
-            <select id="categoryFilter" aria-label="事件分类"><option value="all">全部分类</option></select>
+            <select id="categoryFilter" aria-label="事件分类（可多选）" multiple><option value="all" selected>全部分类</option></select>
           </div>
         </header>
         <div class="ledger-table-wrap">
@@ -299,6 +299,7 @@
   <script src="../supabase-config.js"></script>
   <script src="../account-data.js?v=20260827-1"></script>
   <script src="../shared-nav.js?v=20260827-2"></script>
-  <script src="app.js?v=20260828-1"></script>
+  <script src="core.js?v=20260924-1"></script>
+  <script src="app.js?v=20260924-1"></script>
 </body>
 </html>

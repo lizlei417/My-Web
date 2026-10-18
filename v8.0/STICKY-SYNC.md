@@ -49,5 +49,9 @@ The account tests simulate separate devices and a shared cloud, including
 layout writes, archive deletion, account isolation and delayed iframe replies.
 An isolated headless Edge component check also verifies immediate input saving,
 no load/restore writeback, visible remote updates and the sync status label.
+The lower-right star explicitly confirms and synchronizes the current note.
+It shows a waiting state, then a checkmark only after successful cloud
+acknowledgement; failure retains the edit and offers retry. Automatic saving
+and synchronization remain available as protection against forgotten clicks.
 These checks do not authenticate the production account or replace a two-device
 test. Existing open tabs on both computers must reload to run the corrected code.

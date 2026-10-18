@@ -202,7 +202,7 @@
 
   const refreshSticky = () => {
     const user = currentUser;
-    if (!client || !user?.id || user.isGuest) return Promise.resolve();
+    if (!client || !user?.id || user.isGuest) return Promise.resolve(false);
     if (stickyJobs.has(user.id)) return stickyJobs.get(user.id);
     const job = (async () => {
       try {
@@ -212,9 +212,12 @@
         if (currentUser?.id === user.id) {
           const pending = mappingsFor(user.id).some((item) => stickyKeys.has(item.cloudKey) && readPending(item.localKey));
           notify({ state: pending ? "pending" : "synced", user, scope: "sticky" });
+          return !pending;
         }
+        return false;
       } catch (error) {
         notify({ state: "error", operation: "sticky-sync", error, user });
+        return false;
       } finally {
         stickyJobs.delete(user.id);
       }

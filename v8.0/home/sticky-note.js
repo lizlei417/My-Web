@@ -94,7 +94,7 @@
   };
 
   const writeJson = (key, value) => {
-    if (!key) return;
+    if (!key) return false;
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {}
@@ -104,7 +104,7 @@
     clearTimeout(saveTimer);
     saveTimer = null;
     const key = currentStorageKey();
-    if (!key) return;
+    if (!key) return false;
     const value = JSON.stringify(notes);
     try {
       // A sibling frame can restore cloud data before its storage event arrives.
@@ -113,8 +113,10 @@
         ? window.PortalAccountData.writeStickyNotes(key, value, storedNotes)
         : (localStorage.setItem(key, value), value);
       if (storedNotes !== value) loadNotesForCurrentUser();
+      return true;
     } catch {
       updateSyncLabel("本机保存失败，请勿关闭页面");
+      return false;
     }
   };
 
@@ -334,7 +336,7 @@
           </div>
         </div>
         <span class="sticky-note-sync-status" role="status"></span>
-        <button class="sticky-note-save" type="button" title="保存便签" aria-label="保存便签">✦</button>
+        <button class="sticky-note-save" type="button" title="确认并同步" aria-label="确认并同步便签">✦</button>
       </footer>
       <input class="sticky-note-file" type="file" accept="image/*" hidden>
       ${["n", "ne", "e", "se", "s", "sw", "w", "nw"].map((edge) => `<span class="sticky-resize-handle" data-edge="${edge}" aria-hidden="true"></span>`).join("")}
@@ -366,7 +368,7 @@
     persist();
   };
 
-  const saveNote = (element, animate = false) => {
+  const saveNote = (element) => {
     const state = getState(element.dataset.noteId);
     if (!state) return;
     const text = element.querySelector(".sticky-note-text").value;
@@ -374,13 +376,48 @@
       state.text = text;
       persist();
     }
-    if (animate) window.PortalAccountData?.refreshSticky();
-    if (animate) {
-      const button = element.querySelector(".sticky-note-save");
-      button.classList.remove("saved");
-      void button.offsetWidth;
-      button.classList.add("saved");
+  };
+
+  const confirmNote = async (element) => {
+    const userId = authUser?.id;
+    const noteId = element.dataset.noteId;
+    saveNote(element);
+    if (!persist()) return;
+    const findButton = () => layer.querySelector(`[data-note-id="${CSS.escape(noteId)}"] .sticky-note-save`);
+    const button = findButton();
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    button.classList.remove("saved");
+    button.textContent = "…";
+    button.title = "正在确认同步";
+    button.setAttribute("aria-label", button.title);
+    updateSyncLabel("正在确认同步…");
+    let confirmed = Boolean(authUser?.isGuest);
+    try {
+      if (!confirmed) {
+        confirmed = await window.PortalAccountData?.refreshSticky();
+        // An already-running refresh may finish just before this click's edit.
+        if (!confirmed) confirmed = await window.PortalAccountData?.refreshSticky();
+      }
+    } catch {}
+    if (authUser?.id !== userId) return;
+    const currentButton = findButton();
+    if (!currentButton) return;
+    currentButton.disabled = false;
+    currentButton.textContent = confirmed ? "✓" : "!";
+    currentButton.title = confirmed ? "已确认保存" : "同步失败，点击重试";
+    currentButton.setAttribute("aria-label", currentButton.title);
+    if (confirmed) {
+      currentButton.classList.remove("saved");
+      void currentButton.offsetWidth;
+      currentButton.classList.add("saved");
     }
+    updateSyncLabel(confirmed
+      ? (authUser?.isGuest ? "已确认，仅保存在本机" : "已确认同步到账号")
+      : "同步失败，点击右侧重试");
+    setTimeout(() => {
+      if (currentButton.isConnected && !currentButton.disabled) currentButton.textContent = "✦";
+    }, 2200);
   };
 
   const archiveNote = (element) => {
@@ -553,7 +590,7 @@
       stylePopover.classList.remove("open");
       styleButton.setAttribute("aria-expanded", "false");
     });
-    element.querySelector(".sticky-note-save").addEventListener("click", () => saveNote(element, true));
+    element.querySelector(".sticky-note-save").addEventListener("click", () => confirmNote(element));
 
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files?.[0];

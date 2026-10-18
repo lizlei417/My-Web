@@ -196,3 +196,14 @@ test('a widget layout save uses its own baseline when a storage event is delayed
   await a.refresh();
   assert.deepEqual(a.saved()[0], { id: 'note1', text: '46', x: 400 });
 });
+
+test('explicit confirmation reports cloud failure and success truthfully', async () => {
+  const db = server(); seed(db, notes('38'));
+  const a = await device(db); await a.login();
+  a.storage.setItem(active, notes('46')); db.offline = true;
+  assert.equal(await a.refresh(), false);
+  assert.ok(a.storage.getItem(pendingKey(active)));
+  db.offline = false;
+  assert.equal(await a.refresh(), true);
+  assert.equal(a.saved()[0].text, '46');
+});

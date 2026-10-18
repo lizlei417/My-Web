@@ -1163,7 +1163,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="account-data.js?v=20260827-1"></script>
+  <script src="account-data.js?v=20261019-1"></script>
   <script src="music/player.js"></script>
   <script>
     (() => {
@@ -1750,6 +1750,7 @@
         applyStoredTheme();
         applyNavLayout();
         renderWidgetMenu();
+        if (garden.classList.contains("open")) renderGarden();
       });
 
       window.PortalAccountData?.ready().then(() => {

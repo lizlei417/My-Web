@@ -17,6 +17,8 @@
   const mappingsByLocalKey = new Map();
   const saveTimers = new Map();
   const subscribers = new Set();
+  const stickyKeys = new Set(["home.sticky.active", "home.sticky.archive"]);
+  const stickyJobs = new Map();
   let client = null;
   let currentUser = null;
   let lastReadyUserId = "";
@@ -88,7 +90,141 @@
     });
   };
 
+  // Keep actual edits across logout, navigation and network failures. Loading or
+  // laying out a cached note must never count as a new content edit.
+  const pendingKey = (key) => `portal:sticky-pending:${key}`;
+  const readPending = (key) => JSON.parse(localStorage.getItem(pendingKey(key)) || "null");
+  const parseNotes = (value) => {
+    const notes = JSON.parse(value || "[]");
+    if (!Array.isArray(notes)) throw new Error("Invalid sticky note data");
+    return notes;
+  };
+  const mergeNotes = (baseValue, editedValue, remoteValue) => {
+    const base = new Map(parseNotes(baseValue).map((note) => [note.id, note]));
+    const edited = new Map(parseNotes(editedValue).map((note) => [note.id, note]));
+    const remote = new Map(parseNotes(remoteValue).map((note) => [note.id, note]));
+    for (const [id, old] of base) {
+      if (!edited.has(id)) remote.delete(id);
+      else {
+        const next = edited.get(id);
+        const changed = Object.keys(next).filter((field) => JSON.stringify(next[field]) !== JSON.stringify(old[field]));
+        if (!changed.length) continue;
+        // A remote deletion wins over a stale edit; never resurrect an archive.
+        if (!remote.has(id)) continue;
+        const merged = { ...remote.get(id) };
+        changed.forEach((field) => { merged[field] = next[field]; });
+        remote.set(id, merged);
+      }
+    }
+    for (const [id, note] of edited) if (!base.has(id)) remote.set(id, note);
+    return JSON.stringify([...remote.values()]);
+  };
+
+  const recordStickyEdit = (key, previous, value) => {
+    if (previous === value) return;
+    const match = /^user:([^:]+):homeSticky(NoteArchive|Notes):v1$/.exec(key);
+    if (!match || match[1] === "guest") return;
+    const pending = readPending(key);
+    originalSetItem.call(localStorage, pendingKey(key), JSON.stringify({
+      base: pending ? pending.base : previous,
+      value: value ?? "[]",
+      token: `${Date.now()}-${Math.random()}`
+    }));
+    clearTimeout(saveTimers.get(key));
+    saveTimers.set(key, setTimeout(() => {
+      saveTimers.delete(key);
+      refreshSticky();
+    }, 320));
+    notify({ state: "pending", key });
+  };
+
+  const restoreSticky = (user, mapping, value, revision) => {
+    if (currentUser?.id !== user.id || readPending(mapping.localKey)) return;
+    const revisionKey = `portal:sticky-revision:${mapping.localKey}`;
+    const knownRevision = localStorage.getItem(revisionKey);
+    if (knownRevision && (!revision || Date.parse(revision) < Date.parse(knownRevision))) return;
+    const previous = localStorage.getItem(mapping.localKey);
+    const backupKey = `portal:sticky-recovery:${mapping.localKey}`;
+    // Pre-upgrade caches have no edit history. Retain them for recovery rather
+    // than guessing whether a historical local value or the cloud is newer.
+    if (!knownRevision && previous && previous !== value && parseNotes(previous).length && !localStorage.getItem(backupKey)) {
+      originalSetItem.call(localStorage, backupKey, JSON.stringify({ value: previous, savedAt: new Date().toISOString() }));
+    }
+    if (revision) originalSetItem.call(localStorage, revisionKey, revision);
+    if (previous === value) return;
+    originalSetItem.call(localStorage, mapping.localKey, value);
+    window.dispatchEvent(new CustomEvent("portal:account-data-restored", {
+      detail: { user, keys: [mapping.localKey] }
+    }));
+  };
+
+  const syncStickyMapping = async (user, mapping) => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (currentUser?.id !== user.id) return;
+      const { data, error } = await client.from(TABLE_NAME)
+        .select("value_text,updated_at").eq("user_id", user.id).eq("data_key", mapping.cloudKey);
+      if (error) throw error;
+      if (currentUser?.id !== user.id) return;
+      const row = data?.[0];
+      let pending = readPending(mapping.localKey);
+      // Import existing local notes only when the account has no such row yet.
+      if (!row && !pending && parseNotes(localStorage.getItem(mapping.localKey)).length) {
+        recordStickyEdit(mapping.localKey, null, localStorage.getItem(mapping.localKey));
+        pending = readPending(mapping.localKey);
+      }
+      if (!pending) {
+        restoreSticky(user, mapping, row?.value_text ?? "[]", row?.updated_at);
+        return;
+      }
+      const value = mergeNotes(pending.base, pending.value, row ? row.value_text : pending.base);
+      let revision = row?.updated_at;
+      if (value !== row?.value_text) {
+        const updatedAt = new Date(Math.max(Date.now(), Date.parse(row?.updated_at || 0) + 1)).toISOString();
+        const write = row
+          ? client.from(TABLE_NAME).update({ value_text: value, updated_at: updatedAt })
+            .eq("user_id", user.id).eq("data_key", mapping.cloudKey).eq("updated_at", row.updated_at)
+          : client.from(TABLE_NAME).upsert({ user_id: user.id, data_key: mapping.cloudKey,
+            value_text: value, updated_at: updatedAt }, { onConflict: "user_id,data_key", ignoreDuplicates: true });
+        // Compare-and-swap: retry against the latest row if another device won.
+        const result = await write.select("value_text");
+        if (result.error) throw result.error;
+        if (!result.data?.length) continue;
+        revision = updatedAt;
+      }
+      if (currentUser?.id !== user.id) return;
+      if (readPending(mapping.localKey)?.token !== pending.token) continue;
+      originalRemoveItem.call(localStorage, pendingKey(mapping.localKey));
+      restoreSticky(user, mapping, value, revision);
+      return;
+    }
+    throw new Error("便签正在其他窗口更新，将自动重试");
+  };
+
+  const refreshSticky = () => {
+    const user = currentUser;
+    if (!client || !user?.id || user.isGuest) return Promise.resolve();
+    if (stickyJobs.has(user.id)) return stickyJobs.get(user.id);
+    const job = (async () => {
+      try {
+        for (const mapping of mappingsFor(user.id).filter((item) => stickyKeys.has(item.cloudKey))) {
+          await syncStickyMapping(user, mapping);
+        }
+        if (currentUser?.id === user.id) {
+          const pending = mappingsFor(user.id).some((item) => stickyKeys.has(item.cloudKey) && readPending(item.localKey));
+          notify({ state: pending ? "pending" : "synced", user, scope: "sticky" });
+        }
+      } catch (error) {
+        notify({ state: "error", operation: "sticky-sync", error, user });
+      } finally {
+        stickyJobs.delete(user.id);
+      }
+    })();
+    stickyJobs.set(user.id, job);
+    return job;
+  };
+
   const queueSave = (mapping, value) => {
+    if (stickyKeys.has(mapping.cloudKey)) return;
     if (!client || !currentUser || currentUser.isGuest) return;
     clearTimeout(saveTimers.get(mapping.cloudKey));
     const userId = currentUser.id;
@@ -109,6 +245,7 @@
   };
 
   const queueRemove = (mapping) => {
+    if (stickyKeys.has(mapping.cloudKey)) return;
     if (!client || !currentUser || currentUser.isGuest) return;
     clearTimeout(saveTimers.get(mapping.cloudKey));
     const userId = currentUser.id;
@@ -128,15 +265,19 @@
   };
 
   Storage.prototype.setItem = function portalAccountSetItem(key, value) {
+    const previous = this === window.localStorage ? this.getItem(key) : null;
     originalSetItem.call(this, key, value);
     if (this !== window.localStorage) return;
+    recordStickyEdit(String(key), previous, String(value));
     const mapping = mappingsByLocalKey.get(String(key));
     if (mapping) queueSave(mapping, value);
   };
 
   Storage.prototype.removeItem = function portalAccountRemoveItem(key) {
+    const previous = this === window.localStorage ? this.getItem(key) : null;
     originalRemoveItem.call(this, key);
     if (this !== window.localStorage) return;
+    recordStickyEdit(String(key), previous, null);
     const mapping = mappingsByLocalKey.get(String(key));
     if (mapping) queueRemove(mapping);
   };
@@ -189,6 +330,7 @@
     const changedLocalKeys = localIdentityChanged ? ["portalCurrentUserId"] : [];
 
     mappings.forEach((mapping) => {
+      if (stickyKeys.has(mapping.cloudKey)) return;
       if (cloudRows.has(mapping.cloudKey)) {
         const cloudValue = cloudRows.get(mapping.cloudKey);
         const localValue = localStorage.getItem(mapping.localKey);
@@ -232,6 +374,7 @@
       migratedLegacyKeys.forEach((key) => originalRemoveItem.call(localStorage, key));
     }
 
+    await refreshSticky();
     if (version !== syncVersion) return;
     lastReadyUserId = user.id;
     notify({
@@ -267,11 +410,26 @@
     ready: boot,
     useUser: syncForUser,
     getUser: () => currentUser,
+    refreshSticky,
+    writeStickyNotes(key, value, base) {
+      const merged = mergeNotes(base, value, localStorage.getItem(key));
+      localStorage.setItem(key, merged);
+      return merged;
+    },
     subscribe(callback) {
       subscribers.add(callback);
       return () => subscribers.delete(callback);
     }
   };
+
+  setInterval(() => {
+    if (document.visibilityState !== "hidden") refreshSticky();
+  }, 8000);
+  window.addEventListener("focus", refreshSticky);
+  window.addEventListener("online", refreshSticky);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "hidden") refreshSticky();
+  });
 
   boot();
 })();

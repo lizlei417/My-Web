@@ -282,6 +282,16 @@
   gap: clamp(8px, 3vw, 17px);
 }
 
+.sticky-note-sync-status {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: right;
+  color: var(--sticky-ink);
+  opacity: .8;
+}
+
 .sticky-note-tool,
 .sticky-note-save {
   display: grid;

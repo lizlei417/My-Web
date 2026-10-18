@@ -14,7 +14,13 @@
   let activeNote = null;
   let interaction = null;
   let saveTimer = null;
+  let storedNotes = null;
   let authUser = window.portalCurrentUser || null;
+  let syncLabel = "本机已保存，待同步";
+  const updateSyncLabel = (label) => {
+    syncLabel = label;
+    layer.querySelectorAll(".sticky-note-sync-status").forEach((element) => { element.textContent = label; });
+  };
 
   const noteStyles = {
     classic: {
@@ -96,12 +102,20 @@
 
   const persist = () => {
     clearTimeout(saveTimer);
-    writeJson(currentStorageKey(), notes);
-  };
-
-  const schedulePersist = () => {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(persist, 180);
+    saveTimer = null;
+    const key = currentStorageKey();
+    if (!key) return;
+    const value = JSON.stringify(notes);
+    try {
+      // A sibling frame can restore cloud data before its storage event arrives.
+      // Apply only this widget's changes to that newer local snapshot.
+      storedNotes = window.PortalAccountData?.writeStickyNotes
+        ? window.PortalAccountData.writeStickyNotes(key, value, storedNotes)
+        : (localStorage.setItem(key, value), value);
+      if (storedNotes !== value) loadNotesForCurrentUser();
+    } catch {
+      updateSyncLabel("本机保存失败，请勿关闭页面");
+    }
   };
 
   const getState = (id) => notes.find((note) => note.id === id);
@@ -319,6 +333,7 @@
             ${styleOrder.map((key) => stylePreview(key, key === styleKey)).join("")}
           </div>
         </div>
+        <span class="sticky-note-sync-status" role="status"></span>
         <button class="sticky-note-save" type="button" title="保存便签" aria-label="保存便签">✦</button>
       </footer>
       <input class="sticky-note-file" type="file" accept="image/*" hidden>
@@ -327,6 +342,7 @@
 
     setElementGeometry(element, state);
     const textarea = element.querySelector(".sticky-note-text");
+    element.querySelector(".sticky-note-sync-status").textContent = syncLabel;
     textarea.value = state.text;
     const image = element.querySelector(".sticky-note-image");
     if (image) image.src = state.image;
@@ -353,8 +369,12 @@
   const saveNote = (element, animate = false) => {
     const state = getState(element.dataset.noteId);
     if (!state) return;
-    state.text = element.querySelector(".sticky-note-text").value;
-    persist();
+    const text = element.querySelector(".sticky-note-text").value;
+    if (state.text !== text) {
+      state.text = text;
+      persist();
+    }
+    if (animate) window.PortalAccountData?.refreshSticky();
     if (animate) {
       const button = element.querySelector(".sticky-note-save");
       button.classList.remove("saved");
@@ -504,7 +524,7 @@
     textarea.addEventListener("input", () => {
       const state = getState(element.dataset.noteId);
       state.text = textarea.value;
-      schedulePersist();
+      persist();
     });
 
     moreButton.addEventListener("click", (event) => {
@@ -603,13 +623,14 @@
 
   const loadNotesForCurrentUser = () => {
     clearTimeout(saveTimer);
+    saveTimer = null;
     closeMenus();
     activeNote = null;
     interaction = null;
     layer.innerHTML = "";
+    storedNotes = currentStorageKey() ? localStorage.getItem(currentStorageKey()) : null;
     notes = canUseStickyNotes() ? readJson(currentStorageKey()).map(normalizeState) : [];
     notes.forEach((state) => layer.appendChild(buildNote(state)));
-    if (canUseStickyNotes()) persist();
   };
 
   loadNotesForCurrentUser();
@@ -639,10 +660,39 @@
   });
 
   window.addEventListener("portal:session-changed", (event) => {
-    if (activeNote && canUseStickyNotes()) saveNote(activeNote);
-    else if (canUseStickyNotes()) persist();
+    if (authUser?.id === event.detail?.id) return;
+    if (saveTimer && canUseStickyNotes()) persist();
     authUser = event.detail || null;
+    updateSyncLabel(authUser?.isGuest ? "仅保存在本机" : "本机已保存，待同步");
     loadNotesForCurrentUser();
+  });
+
+  window.addEventListener("portal:account-data-restored", (event) => {
+    if (event.detail?.user?.id !== authUser?.id || !event.detail.keys?.includes(currentStorageKey())) return;
+    const focused = document.activeElement;
+    const id = focused?.closest?.(".sticky-note")?.dataset.noteId;
+    const selection = id ? [focused.selectionStart, focused.selectionEnd] : null;
+    loadNotesForCurrentUser();
+    if (id) {
+      const element = layer.querySelector(`[data-note-id="${CSS.escape(id)}"]`);
+      const input = element?.querySelector(".sticky-note-text");
+      if (input) {
+        setActive(element);
+        input.focus();
+        input.setSelectionRange(...selection);
+      }
+    }
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === currentStorageKey()) loadNotesForCurrentUser();
+  });
+  window.addEventListener("portal:account-data-status", (event) => {
+    const detail = event.detail || {};
+    if (detail.user?.id && detail.user.id !== authUser?.id) return;
+    if (detail.state === "synced") updateSyncLabel("已同步到账号");
+    if (detail.state === "pending") updateSyncLabel("本机已保存，待同步");
+    if (detail.state === "error" || detail.state === "unconfigured") updateSyncLabel("同步失败，已保存在本机");
   });
 
   document.addEventListener("pointerdown", (event) => {
